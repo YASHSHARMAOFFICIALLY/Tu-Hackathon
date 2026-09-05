@@ -163,6 +163,40 @@ copy — which is exactly what the challenge asks for.
 
 ---
 
+## Deploy
+
+Production runs on Vercel and the project is already linked
+(`.vercel/project.json`), so these run from the repo root with no setup:
+
+```bash
+vercel                # preview URL, safe to test
+vercel --prod         # production: https://tu-hackathon.vercel.app
+vercel ls             # recent deployments
+vercel logs <url>     # runtime logs
+vercel rollback       # roll production back one deploy
+```
+
+**The CLI uploads the working directory, not a git ref.** Whatever is in the
+folder ships, committed or not, pushed or not. That is the point when you want
+a deploy without touching GitHub, and the trap when you have an experiment
+open: use bare `vercel` for a preview if you are not certain.
+
+Environment variables live in the Vercel project, not in the repo, and a change
+to one needs a redeploy to take effect:
+
+```bash
+vercel env ls production
+vercel env add GEMINI_API_KEY production
+```
+
+`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET` are set in production. **`GEMINI_API_KEY` is not**, so
+the live site runs with AI triage and semantic duplicate matching off. The
+rule-based duplicate check (category, ~1km, trigram) still runs, which is the
+fallback that path was built for.
+
+---
+
 ## Testing
 
 ```bash

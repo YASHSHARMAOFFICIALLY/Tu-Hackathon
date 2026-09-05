@@ -93,6 +93,8 @@ export function Stat({
   value,
   hint,
   icon,
+  trend,
+  spark,
   tint = "mint",
   tone = "ink",
 }: {
@@ -100,6 +102,14 @@ export function Stat({
   value: string | number;
   hint?: string;
   icon?: React.ReactNode;
+  /**
+   * Seven days against the seven before them, both measured. Rendered only
+   * where the aggregate actually has two windows to compare — a tile that
+   * counts a state, not a flow, gets no arrow.
+   */
+  trend?: { current: number; previous: number };
+  /** Daily counts behind the figure, drawn as a sparkline. */
+  spark?: number[];
   tint?: "mint" | "sky" | "lilac" | "sand";
   tone?: "ink" | "brand" | "danger";
 }) {
@@ -139,10 +149,90 @@ export function Stat({
           <p className="text-body mt-1.5 truncate text-[0.8125rem]">{label}</p>
         </div>
       </div>
+
+      {spark && spark.length > 1 ? (
+        <span className="mt-3 block">
+          <Spark values={spark} />
+        </span>
+      ) : null}
+
+      {trend ? <Trend {...trend} /> : null}
+
       {hint ? (
         <p className="text-body mt-3 text-[0.75rem] leading-[1.5]">{hint}</p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The change between two measured windows, stated as a count and a direction.
+ *
+ * "+3 on the previous 7 days" rather than "+25%": a percentage over small
+ * counts overstates, and a change from zero has no percentage at all. The arrow
+ * is decoration; the sign is in the text, so direction survives without colour.
+ */
+function Trend({ current, previous }: { current: number; previous: number }) {
+  const delta = current - previous;
+  const flat = delta === 0;
+
+  return (
+    <p className="text-body mt-3 flex items-center gap-1.5 text-[0.75rem]">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "font-mono",
+          flat ? "text-body" : delta > 0 ? "text-brand" : "text-status-progress",
+        )}
+      >
+        {flat ? "→" : delta > 0 ? "↑" : "↓"}
+      </span>
+      <span>
+        <span className="text-ink font-medium">
+          {flat ? "No change" : `${delta > 0 ? "+" : ""}${delta}`}
+        </span>{" "}
+        on the previous 7 days
+      </span>
+    </p>
+  );
+}
+
+/**
+ * A sparkline: shape only, no axis, no labels.
+ *
+ * It sits beside a figure that already states the total, so its job is the
+ * direction of travel at a glance. Drawn as a filled area rather than a line
+ * because at 64×28 a 1px stroke reads as noise.
+ */
+function Spark({ values }: { values: number[] }) {
+  const W = 64;
+  const H = 28;
+  const max = Math.max(1, ...values);
+  const step = W / Math.max(1, values.length - 1);
+
+  const points = values.map((v, i) => `${i * step},${H - (v / max) * H}`);
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-8 w-full"
+      aria-hidden="true"
+      preserveAspectRatio="none"
+    >
+      <polygon
+        points={`0,${H} ${points.join(" ")} ${W},${H}`}
+        className="fill-brand/15"
+      />
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        className="stroke-brand"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }
 
@@ -211,6 +301,38 @@ export function StatusBand({
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * Secondary figures, on one white strip.
+ *
+ * These answer "how is the system itself doing" rather than "how many reports
+ * are there", so they are deliberately quieter than the tinted tiles above:
+ * four more coloured cards would flatten the hierarchy and leave the page with
+ * no primary row at all.
+ */
+export function Signals({
+  items,
+}: {
+  items: { label: string; value: string | number; hint?: string }[];
+}) {
+  return (
+    <dl className="border-line divide-line mt-4 grid divide-y rounded-2xl border bg-white sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+      {items.map((item) => (
+        <div key={item.label} className="px-5 py-4">
+          <dt className="text-body text-[0.8125rem]">{item.label}</dt>
+          <dd className="text-ink mt-1.5 font-mono text-[1.25rem] leading-none font-semibold tabular-nums">
+            {item.value}
+          </dd>
+          {item.hint ? (
+            <p className="text-body mt-2 text-[0.75rem] leading-[1.5]">
+              {item.hint}
+            </p>
+          ) : null}
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -429,8 +551,23 @@ export function Categories({
 
 /* ── Departments ────────────────────────────────────────────── */
 
-/** Ranked bars: the question is "who is carrying the load", which is a
- *  comparison of magnitudes, so one hue and a shared baseline. */
+/**
+ * Who is carrying the load, ranked.
+ *
+ * One hue per department, assigned by rank rather than by name, so the busiest
+ * department is always the same colour as the busiest bar in the chart above
+ * it. The count and the share sit on the row: the bar is the comparison, the
+ * numbers are the fact.
+ */
+const DEPARTMENT_HUES = [
+  "var(--cat-roads)",
+  "var(--cat-water)",
+  "var(--cat-electricity)",
+  "var(--cat-sanitation)",
+  "var(--cat-safety)",
+  "var(--cat-other)",
+];
+
 export function Departments({
   data,
 }: {
@@ -441,25 +578,32 @@ export function Departments({
   }
 
   const max = Math.max(1, ...data.map((d) => d.count));
+  const total = data.reduce((sum, d) => sum + d.count, 0);
 
   return (
-    <ul className="mt-5 space-y-3">
-      {data.map((row) => (
-        <li key={row.department}>
-          <div className="flex items-baseline justify-between gap-4">
-            <span className="text-body text-[0.8125rem]">{row.department}</span>
-            <span className="text-ink font-mono text-[0.8125rem] tabular-nums">
-              {row.count}
+    <ul className="mt-5 space-y-3.5">
+      {data.map((row, i) => {
+        const hue = DEPARTMENT_HUES[i % DEPARTMENT_HUES.length];
+        return (
+          <li key={row.department} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3">
+            <span className="text-body truncate text-[0.8125rem]">
+              {row.department}
             </span>
-          </div>
-          <div className="bg-canvas border-line mt-1.5 h-2 overflow-hidden rounded-full border">
-            <div
-              className="bg-brand h-full rounded-full"
-              style={{ width: `${(row.count / max) * 100}%` }}
-            />
-          </div>
-        </li>
-      ))}
+            <span className="bg-surface h-2.5 overflow-hidden rounded-full">
+              <span
+                className="block h-full rounded-full transition-[width] duration-500"
+                style={{ width: `${(row.count / max) * 100}%`, background: hue }}
+              />
+            </span>
+            <span className="text-ink w-14 text-right font-mono text-[0.8125rem] tabular-nums">
+              {row.count}
+              <span className="text-body">
+                {total > 0 ? ` ${Math.round((row.count / total) * 100)}%` : ""}
+              </span>
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -474,6 +618,7 @@ export type IssueRow = {
   category: string;
   address: string;
   createdAt: string | Date;
+  attachments?: { id: string; url: string; fileType: string | null }[];
 };
 
 export function IssueList({
@@ -487,31 +632,65 @@ export function IssueList({
 
   return (
     <ul className="divide-line mt-2 divide-y">
-      {issues.map((issue) => (
-        <li key={issue.id} className="flex items-start gap-4 py-3.5">
-          <span className="text-body mt-0.5 w-14 shrink-0 font-mono text-[0.8125rem] tabular-nums">
-            #{issue.number}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-ink truncate text-[0.9375rem] font-medium">
-              {issue.title}
-            </p>
-            <p className="text-body mt-0.5 truncate text-[0.8125rem]">
-              {CATEGORY[issue.category as IssueCategory]?.label ?? issue.category}{" "}
-              · {issue.address}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <StatusChip status={issue.status} />
-            <time
-              dateTime={new Date(issue.createdAt).toISOString()}
-              className="text-body font-mono text-[0.75rem]"
+      {issues.map((issue) => {
+        const meta = CATEGORY[issue.category as IssueCategory];
+        const photo = issue.attachments?.find((a) =>
+          a.fileType?.startsWith("image/"),
+        );
+
+        return (
+          <li key={issue.id}>
+            {/* The whole row is the link. A title-only target inside a row this
+                tall is a small target surrounded by dead space. */}
+            <Link
+              href={`/issues/${issue.id}`}
+              className="hover:bg-surface -mx-2 flex items-center gap-3.5 rounded-xl px-2 py-3 transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
             >
-              {new Date(issue.createdAt).toLocaleDateString()}
-            </time>
-          </div>
-        </li>
-      ))}
+              {photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photo.url}
+                  alt=""
+                  loading="lazy"
+                  className="border-line size-11 shrink-0 rounded-xl border object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background: `color-mix(in srgb, ${meta?.color ?? "var(--cat-other)"} 14%, white)`,
+                    color: meta?.color ?? "var(--cat-other)",
+                  }}
+                >
+                  <span className="font-mono text-[0.6875rem] tabular-nums">
+                    {issue.number}
+                  </span>
+                </span>
+              )}
+
+              <span className="min-w-0 flex-1">
+                <span className="text-ink block truncate text-[0.9375rem] font-medium">
+                  {issue.title}
+                </span>
+                <span className="text-body mt-0.5 block truncate text-[0.8125rem]">
+                  {meta?.label ?? issue.category} · {issue.address}
+                </span>
+              </span>
+
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                <StatusChip status={issue.status} />
+                <time
+                  dateTime={new Date(issue.createdAt).toISOString()}
+                  className="text-body font-mono text-[0.75rem]"
+                >
+                  {new Date(issue.createdAt).toLocaleDateString()}
+                </time>
+              </span>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }

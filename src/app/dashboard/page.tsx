@@ -15,11 +15,13 @@ import {
   IssueList,
   OverTime,
   Panel,
+  Signals,
   Stat,
   StatusBand,
   type IssueRow,
 } from "@/components/dashboard/pieces";
 import { getCurrentUser } from "@/modules/auth/permissions";
+import { listDepartments } from "@/modules/departments/service";
 import { getDashboard } from "@/modules/dashboard/service";
 import { listIssues } from "@/modules/issues/service";
 import { toPublicIssue } from "@/modules/issues/serialize";
@@ -49,7 +51,12 @@ export const metadata = { title: "Dashboard" };
  * deliberately rounded to about a kilometre in the public shape, and a map with
  * no tiles is a grey box.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage(props: PageProps<"/dashboard">) {
+  const params = await props.searchParams;
+  const departmentId = Array.isArray(params.departmentId)
+    ? params.departmentId[0]
+    : params.departmentId;
+
   const user = await getCurrentUser();
 
   if (!user) redirect("/sign-in?redirectTo=/dashboard");
@@ -104,7 +111,11 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {isAuthority ? <Authority /> : <Citizen />}
+        {isAuthority ? (
+          <Authority departmentId={departmentId} />
+        ) : (
+          <Citizen />
+        )}
       </div>
     </AppShell>
   );
@@ -121,11 +132,12 @@ function greeting() {
 
 /* ── Authority ──────────────────────────────────────────────── */
 
-async function Authority() {
-  // Both reads are independent, so they overlap rather than queue.
-  const [summary, recent] = await Promise.all([
-    getDashboard(),
-    listIssues({ limit: 6, offset: 0 }),
+async function Authority({ departmentId }: { departmentId?: string }) {
+  // Every read is independent, so they overlap rather than queue.
+  const [summary, recent, departments] = await Promise.all([
+    getDashboard({ departmentId }),
+    listIssues({ limit: 6, offset: 0, ...(departmentId ? { departmentId } : {}) }),
+    listDepartments(),
   ]);
 
   const rows: IssueRow[] = recent.issues.map(toPublicIssue);
@@ -135,6 +147,10 @@ async function Authority() {
       ? "Nothing resolved yet"
       : `Average ${summary.averageResolutionHours} hours from report to resolution`;
 
+  // The last fourteen days of the series, so the sparkline shows the window the
+  // trend figure is actually comparing.
+  const spark = summary.overTime.slice(-14).map((d) => d.count);
+
   const share = (n: number) =>
     summary.total === 0
       ? undefined
@@ -142,13 +158,19 @@ async function Authority() {
 
   return (
     <>
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <DepartmentScope departments={departments} value={departmentId} />
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="Reports in the register"
           value={summary.total}
           icon={<ReportIcon className="size-5" />}
           tint="mint"
-          hint="Every report ever filed, in any state"
+          spark={spark}
+          trend={{
+            current: summary.lastSevenDays,
+            previous: summary.previousSevenDays,
+          }}
         />
         <Stat
           label="Open"
@@ -178,6 +200,37 @@ async function Authority() {
           hint={resolutionHint}
         />
       </div>
+
+      <Signals
+        items={[
+          {
+            label: "Filed in the last 7 days",
+            value: summary.lastSevenDays,
+            hint: `${summary.previousSevenDays} in the seven days before that`,
+          },
+          {
+            label: "Duplicates caught before filing",
+            value: summary.duplicatesLinked,
+            hint: "Linked to an existing report by the citizen filing it",
+          },
+          {
+            label: "Departments carrying work",
+            value: `${summary.byDepartment.filter((d) => d.count > 0).length} / ${summary.byDepartment.length}`,
+            hint: "Departments with at least one report on the register",
+          },
+          {
+            label: "Average time to resolution",
+            value:
+              summary.averageResolutionHours === null
+                ? "—"
+                : `${summary.averageResolutionHours} h`,
+            hint:
+              summary.averageResolutionHours === null
+                ? "Nothing has been resolved yet"
+                : "Measured across every resolved report",
+          },
+        ]}
+      />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel title="Reports filed, last 30 days">
@@ -283,5 +336,66 @@ async function Citizen() {
         </Panel>
       </div>
     </>
+  );
+}
+
+/* ── Department scope ───────────────────────────────────────── */
+
+/**
+ * Narrows every figure on the page to one department.
+ *
+ * A GET form again, so the scoped dashboard is a URL: an officer can keep their
+ * own department bookmarked, and "look at Sanitation" is something one person
+ * can send to another. The whole page re-renders on the server with the filter
+ * pushed down into the aggregate query, so nothing is filtered in the browser.
+ */
+function DepartmentScope({
+  departments,
+  value,
+}: {
+  departments: { id: string; name: string }[];
+  value?: string;
+}) {
+  if (departments.length === 0) return null;
+
+  return (
+    <form
+      method="get"
+      action="/dashboard"
+      className="border-line mt-6 flex flex-wrap items-end gap-3 rounded-2xl border bg-white p-4"
+    >
+      <label className="min-w-0 flex-1 sm:max-w-xs">
+        <span className="text-body mb-1.5 block text-[0.75rem] font-medium">
+          Department
+        </span>
+        <select
+          name="departmentId"
+          defaultValue={value ?? ""}
+          className="border-field text-ink h-11 w-full rounded-xl border bg-white px-3.5 text-[0.875rem] focus-visible:ring-2 focus-visible:ring-brand focus-visible:border-brand focus-visible:outline-none"
+        >
+          <option value="">Every department</option>
+          {departments.map((department) => (
+            <option key={department.id} value={department.id}>
+              {department.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <button
+        type="submit"
+        className="bg-brand hover:bg-brand-hover h-11 rounded-xl px-5 text-[0.875rem] font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+      >
+        Apply
+      </button>
+      {value ? (
+        <Link
+          href="/dashboard"
+          className="text-body hover:text-ink inline-flex h-11 items-center rounded-xl px-3 text-[0.875rem] transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+        >
+          Reset
+        </Link>
+      ) : null}
+    </form>
   );
 }

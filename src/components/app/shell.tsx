@@ -84,6 +84,26 @@ export function AppShell({
             {title}
           </p>
 
+          {/* Search belongs in the bar because it is the fastest route into the
+              register from anywhere. A GET form, so it works before hydration
+              and lands on a URL that can be shared. */}
+          <form
+            method="get"
+            action="/issues"
+            role="search"
+            className="ml-4 hidden min-w-0 max-w-sm flex-1 md:block"
+          >
+            <label>
+              <span className="sr-only">Search the register</span>
+              <input
+                type="search"
+                name="q"
+                placeholder="Search issues, places, keywords…"
+                className="border-line bg-surface text-ink placeholder:text-placeholder h-10 w-full rounded-full border px-4 text-[0.8125rem] focus-visible:ring-2 focus-visible:ring-brand focus-visible:border-brand focus-visible:outline-none"
+              />
+            </label>
+          </form>
+
           <div className="ml-auto flex items-center gap-3">
             <span className="border-line text-body hidden items-center gap-2 rounded-full border px-3 py-1.5 text-[0.75rem] sm:inline-flex">
               <span

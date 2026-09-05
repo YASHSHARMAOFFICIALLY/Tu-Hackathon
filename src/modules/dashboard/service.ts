@@ -25,14 +25,42 @@ export type DashboardSummary = {
   byCategory: { category: string; count: number }[];
   byDepartment: { department: string; count: number }[];
   overTime: { day: string; count: number }[];
+  /**
+   * Reports linked to an earlier report of the same thing. The duplicate check
+   * runs before an issue is created, and every "mine is this one" writes a row
+   * in `issue_duplicates` — this counts the reports it caught.
+   */
+  duplicatesLinked: number;
+  /**
+   * Reports filed in the last seven days, and in the seven before that. Two
+   * counts rather than one percentage: the dashboard renders the delta, and a
+   * change from 0 has no percentage to render.
+   */
+  lastSevenDays: number;
+  previousSevenDays: number;
 };
 
-export async function getDashboard(): Promise<DashboardSummary> {
+/** Narrow the whole dashboard to one department, or leave it city-wide. */
+export type DashboardFilter = { departmentId?: string };
+
+export async function getDashboard(
+  filter: DashboardFilter = {},
+): Promise<DashboardSummary> {
   // The brief calls this the "Authority dashboard" — it exposes counts across
   // every department, so it is not public.
   await requireRole("OFFICER", "ADMIN");
 
-  const [summary, byCategory, byDepartment, overTime] = await Promise.all([
+  // One optional predicate, spliced into each aggregate. `sql` builds it as a
+  // bound parameter; the department id never becomes SQL text.
+  const scope = filter.departmentId
+    ? sql`where department_id = ${filter.departmentId}`
+    : sql``;
+  const andScope = filter.departmentId
+    ? sql`and i.department_id = ${filter.departmentId}`
+    : sql``;
+
+  const [summary, byCategory, byDepartment, overTime, duplicates, trend] =
+    await Promise.all([
     db.execute(sql`
       select
         count(*)::int                                                   as total,
@@ -50,11 +78,12 @@ export async function getDashboard(): Promise<DashboardSummary> {
         avg(extract(epoch from (resolved_at - created_at)) / 3600)
           filter (where resolved_at is not null)                        as avg_resolution_hours
       from issues
+      ${scope}
     `),
 
     db.execute(sql`
       select category, count(*)::int as count
-      from issues group by category order by count desc
+      from issues ${scope} group by category order by count desc
     `),
 
     // LEFT JOIN from departments so a department with zero issues still shows —
@@ -71,7 +100,26 @@ export async function getDashboard(): Promise<DashboardSummary> {
              count(*)::int as count
       from issues
       where created_at > now() - interval '30 days'
+        ${filter.departmentId ? sql`and department_id = ${filter.departmentId}` : sql``}
       group by 1 order by 1
+    `),
+
+    db.execute(sql`
+      select count(*)::int as count
+      from issue_duplicates d
+      join issues i on i.id = d.duplicate_issue_id
+      where true ${andScope}
+    `),
+
+    // Both windows in one scan, so the delta cannot be read from two different
+    // moments in time.
+    db.execute(sql`
+      select
+        count(*) filter (where created_at > now() - interval '7 days')::int  as recent,
+        count(*) filter (where created_at <= now() - interval '7 days'
+                           and created_at > now() - interval '14 days')::int as previous
+      from issues
+      ${scope}
     `),
   ]);
 
@@ -95,5 +143,12 @@ export async function getDashboard(): Promise<DashboardSummary> {
     byCategory: rows<{ category: string; count: number }>(byCategory),
     byDepartment: rows<{ department: string; count: number }>(byDepartment),
     overTime: rows<{ day: string; count: number }>(overTime),
+    duplicatesLinked: Number(
+      (rows<{ count: number }>(duplicates)[0]?.count ?? 0),
+    ),
+    lastSevenDays: Number(rows<{ recent: number }>(trend)[0]?.recent ?? 0),
+    previousSevenDays: Number(
+      rows<{ previous: number }>(trend)[0]?.previous ?? 0,
+    ),
   };
 }

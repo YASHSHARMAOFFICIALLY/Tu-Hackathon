@@ -96,7 +96,7 @@ Two rules keep this working with several contributors:
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/issues` | filtered, paginated (`status`, `category`, `priority`, `departmentId`, `mine`, `limit`, `offset`) |
+| `GET` | `/api/issues` | filtered, paginated (`status`, `category`, `priority`, `departmentId`, `mine`, `assigned=me`, `limit`, `offset`) |
 | `GET` | `/api/issues/:id` | issue + timeline |
 | `GET` | `/api/public/issues/:number` | track by the reference number a citizen was given |
 
@@ -112,6 +112,9 @@ Two rules keep this working with several contributors:
 | `PATCH` | `/api/issues/:id/status` | OFFICER+ |
 | `PATCH` | `/api/issues/:id/assign` | OFFICER+ |
 | `PATCH` | `/api/issues/:id/priority` | OFFICER+ |
+| `POST` | `/api/issues/:id/triage` | OFFICER+ (accept or modify AI suggestions) |
+| `POST` | `/api/issues/:id/attachments` | reporter or OFFICER+ |
+| `DELETE` | `/api/issues/:id/attachments/:attachmentId` | reporter or OFFICER+ |
 | `POST`/`DELETE` | `/api/issues/:id/duplicates` | OFFICER+ |
 | `GET` | `/api/dashboard` | OFFICER+ |
 | `GET` | `/api/admin/backup/export` | ADMIN |

@@ -45,3 +45,7 @@ next-env.d.ts
 .claude/
 .agents/
 skills-lock.json
+
+# internal planning notes — kept local, not part of the deliverable
+docs/
+brand.md

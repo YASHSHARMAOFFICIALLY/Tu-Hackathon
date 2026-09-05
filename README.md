@@ -4,6 +4,8 @@ Citizens report public issues; authorities triage, assign and resolve them; the
 public follows progress. Built for **TEZHACK 2026** — Team CUCKOO (ID 69),
 problem **WEB03**, challenge **WEB-C16 (Backup and Restore)**.
 
+**Live:** https://tu-hackathon.vercel.app
+
 **Stack:** Next.js 16 (App Router) · TypeScript · Drizzle ORM v1 · Neon Postgres
 · Better Auth (Google) · Tailwind v4 · Bun
 

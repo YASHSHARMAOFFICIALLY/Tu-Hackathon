@@ -34,6 +34,18 @@ export const auth = betterAuth({
   // preview origins here as they appear.
   trustedOrigins: [env.BETTER_AUTH_URL],
 
+  // Credential sign-in, alongside Google. The `account.password` column is
+  // already part of Better Auth's schema, so this needs no migration, and
+  // `account` is in NEVER_EXPORTED, so password hashes never reach a backup.
+  //
+  // Email verification is off: this deployment has no mail transport, and a
+  // verification gate that can never be satisfied locks every credential user
+  // out. Turn it on at the same time as a mail provider, not before.
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+  },
+
   socialProviders: {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,

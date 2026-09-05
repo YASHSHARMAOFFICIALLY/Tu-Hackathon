@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
+/**
+ * Forest-green civic palette.
+ *
+ * The hero photograph sits behind the page and fades upward into the canvas,
+ * so the canvas is tinted toward the brand's own green rather than toward a
+ * default warmth, and the greens are cool enough to sit with the greenery in
+ * the photograph instead of fighting it.
+ *
+ * Contrast, measured: white on `--brand` is 7.9:1; `--brand-bright` as text on
+ * `--canvas` is 4.6:1; `--body` on `--canvas` is 7.3:1. All clear WCAG AA.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #f4f6f1;
+  --ink: #16241d;
+  --body: #46554d;
+  --line: #16241d1f;
+
+  --brand: #1f5c42;
+  --brand-hover: #174a35;
+  --brand-bright: #2e7d5b;
+  --brand-tint: #e3ede6;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-bright: var(--brand-bright);
+  --color-brand-tint: var(--brand-tint);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-script: var(--font-caveat);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Hero entrance. One keyframe, reused with a per-element delay. */
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(0.85rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * The default state is the visible one, so the content still renders if the
+ * animation never runs (hidden tab, headless render, reduced motion).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .settle {
+    animation: settle 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }

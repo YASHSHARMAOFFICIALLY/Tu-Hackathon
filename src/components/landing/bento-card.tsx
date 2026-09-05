@@ -142,12 +142,21 @@ function Orbit() {
           className="orbit-ring text-brand/30"
         />
 
-        <circle cx="120" cy="120" r="30" className="fill-ink" />
+        {/* White and smaller than the stage nodes' ring, so the hub is the
+            quiet centre the stages travel around rather than a black weight
+            pinning the middle of the card. */}
+        <circle
+          cx="120"
+          cy="120"
+          r="26"
+          className="fill-white stroke-brand/20"
+          strokeWidth="1.5"
+        />
         <text
           x="120"
-          y="124"
+          y="123.5"
           textAnchor="middle"
-          className="fill-canvas text-[9px] font-bold tracking-[0.14em]"
+          className="fill-brand text-[8px] font-bold tracking-[0.14em]"
           style={{ fontFamily: "var(--font-mono)" }}
         >
           STATUS

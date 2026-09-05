@@ -112,7 +112,35 @@ const MIGRATIONS: Record<
   number,
   (backup: Record<string, unknown>) => Record<string, unknown>
 > = {
-  // 1: (backup) => ({ ...backup, version: 2, ... })
+  /**
+   * v1 → v2: the AI triage fields were added to issues.
+   *
+   * Nothing to compute — an issue exported before AI existed simply has no
+   * suggestions, which is the same state as an issue whose triage has not run
+   * yet. Setting them explicitly to null (rather than leaving them absent)
+   * keeps the migrated document identical in shape to a native v2 file.
+   */
+  1: (backup) => {
+    const data = backup.data as Record<string, unknown[]>;
+    return {
+      ...backup,
+      version: 2,
+      data: {
+        ...data,
+        issues: (data.issues ?? []).map((issue) => ({
+          ...(issue as Record<string, unknown>),
+          aiCategory: null,
+          aiPriority: null,
+          aiPriorityScore: null,
+          aiDepartmentId: null,
+          aiSummary: null,
+          aiReasoning: null,
+          aiConfidence: null,
+          aiReviewedAt: null,
+        })),
+      },
+    };
+  },
 };
 
 /**

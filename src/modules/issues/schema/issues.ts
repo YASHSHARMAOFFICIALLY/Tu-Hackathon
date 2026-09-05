@@ -9,10 +9,12 @@ import {
   bigserial,
   doublePrecision,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
   uuid,
+  vector,
 } from "drizzle-orm/pg-core";
 
 import { primaryId, timestamps } from "@/db/schema/columns";
@@ -74,6 +76,36 @@ export const issues = pgTable(
     resolutionNote: text("resolution_note"),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 
+    // --- AI triage (suggestions only) -------------------------------------
+    // Every field here is a RECOMMENDATION shown to an officer, never a
+    // substitute for the real category/priority/departmentId above. AI assists
+    // the authority; it does not decide for them. All nullable: triage runs
+    // after the issue is committed and may fail or be disabled entirely.
+    aiCategory: issueCategory("ai_category"),
+    aiPriority: issuePriority("ai_priority"),
+    /** 0-100. Higher means more urgent, with the reasoning in aiSummary. */
+    aiPriorityScore: integer("ai_priority_score"),
+    aiDepartmentId: uuid("ai_department_id").references(() => departments.id, {
+      onDelete: "set null",
+    }),
+    /** Two-line summary so an officer does not have to read a long complaint. */
+    aiSummary: text("ai_summary"),
+    /** One sentence explaining the priority score, shown next to it. */
+    aiReasoning: text("ai_reasoning"),
+    /** 0-100 self-reported confidence. Low values should be reviewed harder. */
+    aiConfidence: integer("ai_confidence"),
+    /** Set when an officer accepts or overrides the suggestions. */
+    aiReviewedAt: timestamp("ai_reviewed_at", { withTimezone: true }),
+
+    /**
+     * Semantic embedding of "title + description", for duplicate detection.
+     *
+     * 768 dimensions: text-embedding-004's native size, and newer Gemini
+     * embedding models can be truncated to it, so the column survives a model
+     * change. Derived data — NOT included in backups, recomputed instead.
+     */
+    embedding: vector("embedding", { dimensions: 768 }),
+
     ...timestamps,
   },
   (t) => [
@@ -91,6 +123,13 @@ export const issues = pgTable(
     index("issues_title_trgm_idx").using(
       "gin",
       sql`${t.title} gin_trgm_ops`,
+    ),
+    // HNSW over cosine distance for semantic duplicate search. Chosen over
+    // ivfflat because it needs no training pass and stays accurate on a small,
+    // growing table — which is exactly a hackathon dataset.
+    index("issues_embedding_idx").using(
+      "hnsw",
+      sql`${t.embedding} vector_cosine_ops`,
     ),
   ],
 );

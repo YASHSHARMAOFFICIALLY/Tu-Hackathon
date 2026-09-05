@@ -71,6 +71,8 @@ export type ListIssuesInput = z.infer<typeof listIssuesSchema>;
 export const checkDuplicatesSchema = z
   .object({
     title: z.string().trim().min(5).max(200),
+    /** Optional: sharpens the semantic match, ignored by the trigram half. */
+    description: z.string().trim().max(5000).optional(),
     category: categorySchema,
   })
   .and(coordinates);
@@ -101,3 +103,10 @@ export const assignIssueSchema = z
 export const setPrioritySchema = z.object({ priority: prioritySchema });
 
 export const linkDuplicateSchema = z.object({ duplicateIssueId: z.uuid() });
+
+/** Officer review of AI suggestions: accept as-is, or override any part. */
+export const applyTriageSchema = z.object({
+  category: categorySchema.optional(),
+  priority: prioritySchema.optional(),
+  departmentId: z.uuid().nullable().optional(),
+});

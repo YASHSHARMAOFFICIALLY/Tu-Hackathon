@@ -70,7 +70,23 @@ export async function exportBackup(
       })
       .from(user)
       .leftJoin(profiles, eq(profiles.userId, user.id)),
-    db.select().from(issues),
+    // Explicit column list, not select(): the `embedding` column must never
+    // reach the file. It is derived, enormous, and recomputable.
+    db.select({
+      id: issues.id, number: issues.number, title: issues.title,
+      description: issues.description, category: issues.category,
+      address: issues.address, latitude: issues.latitude,
+      longitude: issues.longitude, status: issues.status,
+      priority: issues.priority, reportedBy: issues.reportedBy,
+      assignedTo: issues.assignedTo, departmentId: issues.departmentId,
+      resolutionNote: issues.resolutionNote, resolvedAt: issues.resolvedAt,
+      aiCategory: issues.aiCategory, aiPriority: issues.aiPriority,
+      aiPriorityScore: issues.aiPriorityScore,
+      aiDepartmentId: issues.aiDepartmentId, aiSummary: issues.aiSummary,
+      aiReasoning: issues.aiReasoning, aiConfidence: issues.aiConfidence,
+      aiReviewedAt: issues.aiReviewedAt,
+      createdAt: issues.createdAt, updatedAt: issues.updatedAt,
+    }).from(issues),
     db.select().from(issueHistory),
     db.select().from(comments),
     db.select().from(attachments),

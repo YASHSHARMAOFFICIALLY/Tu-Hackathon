@@ -25,8 +25,14 @@ import {
   userRole,
 } from "@/db/schema/enums";
 
-/** Bump when the shape changes, and add a migration in `migrations` below. */
-export const FORMAT_VERSION = 1;
+/**
+ * Bump when the shape changes, and add a migration step in `validate.ts`.
+ *
+ * v1 → v2: added the AI triage fields to issues. A v1 file still imports; the
+ * migration fills the new fields with null, which is exactly what an issue
+ * looks like before triage runs.
+ */
+export const FORMAT_VERSION = 2;
 
 export const FORMAT_NAME = "public-issue-tracker";
 
@@ -80,6 +86,20 @@ const issueSchema = z.object({
   departmentId: z.uuid().nullable().optional(),
   resolutionNote: z.string().nullable().optional(),
   resolvedAt: nullableDate,
+
+  // --- v2: AI triage suggestions ------------------------------------------
+  // Optional so a v1 file (taken before AI existed) still parses. The
+  // `embedding` column is deliberately NOT here: it is derived data, it would
+  // bloat the file by an order of magnitude, and it is recomputed on demand.
+  aiCategory: z.enum(issueCategory.enumValues).nullable().optional(),
+  aiPriority: z.enum(issuePriority.enumValues).nullable().optional(),
+  aiPriorityScore: z.number().int().nullable().optional(),
+  aiDepartmentId: z.uuid().nullable().optional(),
+  aiSummary: z.string().nullable().optional(),
+  aiReasoning: z.string().nullable().optional(),
+  aiConfidence: z.number().int().nullable().optional(),
+  aiReviewedAt: nullableDate,
+
   createdAt: dateish,
   updatedAt: dateish,
 });

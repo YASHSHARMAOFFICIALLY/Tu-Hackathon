@@ -32,4 +32,18 @@ export const env = {
 
   GOOGLE_CLIENT_ID: required("GOOGLE_CLIENT_ID"),
   GOOGLE_CLIENT_SECRET: required("GOOGLE_CLIENT_SECRET"),
+
+  /**
+   * Gemini API key (Google AI Studio). OPTIONAL on purpose: without it the app
+   * runs exactly as before, minus AI suggestions. Triage must never be the
+   * reason a citizen cannot file a report.
+   */
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
+  /** Model ids in env so a newer model is a config change, not a code change. */
+  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+  GEMINI_EMBEDDING_MODEL:
+    process.env.GEMINI_EMBEDDING_MODEL ?? "text-embedding-004",
 } as const;
+
+/** Whether AI features are configured. Everything AI checks this first. */
+export const aiEnabled = env.GEMINI_API_KEY.length > 0;

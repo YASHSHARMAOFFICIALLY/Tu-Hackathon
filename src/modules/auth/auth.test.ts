@@ -12,6 +12,8 @@ import { describe, expect, test } from "bun:test";
 
 import { auth } from "./index";
 
+const testWithDatabase = test.skipIf(process.env.SKIP_DATABASE_TESTS === "1");
+
 describe("auth boundary", () => {
   test("a request with no cookies has no session", async () => {
     const session = await auth.api.getSession({ headers: new Headers() });
@@ -26,7 +28,7 @@ describe("auth boundary", () => {
     expect(session).toBeNull();
   });
 
-  test("the Google provider is configured", async () => {
+  testWithDatabase("the Google provider is configured", async () => {
     const response = await auth.handler(
       new Request("http://localhost:3000/api/auth/sign-in/social", {
         method: "POST",

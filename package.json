@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
     "db:generate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:studio": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs studio",

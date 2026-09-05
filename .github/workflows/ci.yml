@@ -18,7 +18,7 @@ jobs:
         with:
           bun-version: 1.3.11
       - run: bun install --frozen-lockfile
-      - run: bunx tsc --noEmit
+      - run: bun run typecheck
       - run: bun run lint
       # Fails if a schema change was committed without its migration — the
       # single most common way a schema PR breaks the next deploy.

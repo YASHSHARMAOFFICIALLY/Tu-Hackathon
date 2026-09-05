@@ -58,7 +58,7 @@ export default async function SignInPage({
         <div className="mx-auto w-full max-w-sm">
           <Link
             href="/"
-            className="text-ink inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:outline-none"
+            className="text-ink -my-2 inline-flex min-h-11 items-center gap-2.5 rounded-lg py-2 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:outline-none"
           >
             <Mark />
             <span className="text-[1.25rem] font-bold tracking-[-0.02em]">

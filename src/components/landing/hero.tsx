@@ -59,7 +59,7 @@ export function Hero() {
 
       <div className="mx-auto w-full max-w-[1440px] px-4 pt-[2vh] pb-[10rem] text-center md:px-8">
         <div className="mx-auto max-w-3xl">
-          <p className="settle bg-brand-tint/80 text-brand inline-flex items-center gap-2.5 rounded-full px-4 py-1.5 text-[0.75rem] font-medium tracking-[0.06em] uppercase backdrop-blur-sm">
+          <p className="settle bg-brand-tint text-brand mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 rounded-2xl px-4 py-1.5 text-[0.75rem] font-medium tracking-[0.06em] uppercase">
             Citizens
             <span aria-hidden="true" className="text-brand/40">
               ×
@@ -106,7 +106,7 @@ export function Hero() {
             </Link>
             <Link
               href="/track"
-              className="border-brand/35 text-brand hover:bg-brand-tint inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white/75 px-7 text-[0.9375rem] font-medium backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+              className="border-brand-line text-brand hover:bg-brand-tint inline-flex h-12 w-full items-center justify-center rounded-xl border bg-white px-7 text-[0.9375rem] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
             >
               Track a report
             </Link>

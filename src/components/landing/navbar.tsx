@@ -60,10 +60,10 @@ export function Navbar() {
       >
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:outline-none"
+          className="-my-2 flex min-h-11 min-w-0 items-center gap-2.5 rounded-lg py-2 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:outline-none"
         >
           <Mark />
-          <span className="text-ink text-[1.375rem] font-bold tracking-[-0.02em]">
+          <span className="text-ink min-w-0 text-[1.375rem] font-bold tracking-[-0.02em]">
             CivicTrack
           </span>
         </Link>
@@ -95,7 +95,7 @@ export function Navbar() {
         <div className="ml-auto hidden items-center gap-3 lg:flex">
           <Link
             href="/sign-in"
-            className="border-line text-ink hover:border-brand/40 hover:bg-brand-tint/60 inline-flex h-11 items-center rounded-xl border bg-white/70 px-5 text-[0.9375rem] font-medium backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="border-field text-ink hover:border-brand hover:bg-brand-tint inline-flex h-11 items-center rounded-xl border bg-white px-5 text-[0.9375rem] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             Log in
           </Link>
@@ -113,7 +113,7 @@ export function Navbar() {
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? "Close menu" : "Open menu"}
-          className="text-ink -mr-2.5 ml-auto inline-flex size-11 items-center justify-center rounded-lg transition-colors hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none lg:hidden"
+          className="text-ink -mr-2.5 ml-auto inline-flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none lg:hidden"
         >
           {open ? <CloseIcon /> : <MenuIcon />}
         </button>
@@ -141,7 +141,7 @@ export function Navbar() {
             <Link
               href="/sign-in"
               onClick={() => setOpen(false)}
-              className="border-line text-ink flex min-h-12 items-center justify-center rounded-xl border bg-white px-5 text-base font-medium focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+              className="border-field text-ink flex min-h-12 items-center justify-center rounded-xl border bg-white px-5 text-base font-medium focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
             >
               Log in
             </Link>

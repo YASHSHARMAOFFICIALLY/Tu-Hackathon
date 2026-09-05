@@ -175,7 +175,7 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-describedby={describedBy}
-        className="border-line text-ink placeholder:text-body/55 focus-visible:border-brand focus-visible:ring-brand/25 mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-[0.9375rem] transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="border-field text-ink placeholder:text-placeholder focus-visible:border-brand focus-visible:ring-brand/25 mt-1.5 h-12 w-full rounded-xl border bg-white px-3.5 text-[0.9375rem] transition-colors focus-visible:ring-2 focus-visible:outline-none"
       />
     </div>
   );

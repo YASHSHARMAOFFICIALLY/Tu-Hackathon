@@ -56,7 +56,8 @@ export function AppShell({
   children,
 }: {
   nav: NavItem[];
-  user: { name: string; role: string };
+  /** Null for an anonymous visitor: the register and the tracker are public. */
+  user: { name: string; role: string } | null;
   title: string;
   children: React.ReactNode;
 }) {
@@ -91,17 +92,28 @@ export function AppShell({
               />
               Live register
             </span>
-            <span className="bg-brand-tint text-brand flex size-9 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold">
-              {initials(user.name)}
-            </span>
-            <span className="hidden leading-tight sm:block">
-              <span className="text-ink block text-[0.8125rem] font-medium">
-                {user.name}
-              </span>
-              <span className="text-body block font-mono text-[0.6875rem]">
-                {user.role}
-              </span>
-            </span>
+            {user ? (
+              <>
+                <span className="bg-brand-tint text-brand flex size-9 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold">
+                  {initials(user.name)}
+                </span>
+                <span className="hidden leading-tight sm:block">
+                  <span className="text-ink block text-[0.8125rem] font-medium">
+                    {user.name}
+                  </span>
+                  <span className="text-body block font-mono text-[0.6875rem]">
+                    {user.role}
+                  </span>
+                </span>
+              </>
+            ) : (
+              <Link
+                href="/sign-in"
+                className="bg-brand hover:bg-brand-hover inline-flex h-9 items-center rounded-lg px-4 text-[0.8125rem] font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         </header>
 

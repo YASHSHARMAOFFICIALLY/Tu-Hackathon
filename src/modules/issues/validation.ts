@@ -54,6 +54,12 @@ export const updateIssueSchema = z.object({
 });
 
 export const listIssuesSchema = z.object({
+  /**
+   * Free text over title, description and address. Trimmed to 100 characters
+   * because it is interpolated into an ILIKE pattern: a 5000-character needle
+   * is never a real search, only a way to make Postgres scan for a long time.
+   */
+  q: z.string().trim().min(1).max(100).optional(),
   status: statusSchema.optional(),
   category: categorySchema.optional(),
   priority: prioritySchema.optional(),

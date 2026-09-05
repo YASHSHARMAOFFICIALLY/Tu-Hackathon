@@ -5,7 +5,7 @@
  * Nothing here imports Request or Response — that is what lets the backup
  * module reuse these functions in Phase 7.
  */
-import { and, eq, SQL } from "drizzle-orm";
+import { and, eq, ilike, or, SQL } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dbPool } from "@/db/pool";
@@ -97,7 +97,21 @@ export async function listIssues(input: ListIssuesInput) {
   if (input.mine && !user) return { issues: [], total: 0 };
 
   // Drizzle v1's relational API takes an object filter, not raw SQL.
+  //
+  // `q` is the one condition that is not an equality, so it is expressed with
+  // OR over three columns. The `%` wrappers are the only interpolation: the
+  // needle itself rides as a bound parameter, never as SQL text.
+  const needle = input.q ? `%${input.q}%` : null;
   const where = {
+    ...(needle
+      ? {
+          OR: [
+            { title: { ilike: needle } },
+            { description: { ilike: needle } },
+            { address: { ilike: needle } },
+          ],
+        }
+      : {}),
     ...(input.status ? { status: input.status } : {}),
     ...(input.category ? { category: input.category } : {}),
     ...(input.priority ? { priority: input.priority } : {}),
@@ -108,6 +122,14 @@ export async function listIssues(input: ListIssuesInput) {
   // The same filter expressed as SQL for the count. Kept next to the object
   // above so the two cannot drift apart unnoticed.
   const conditions: SQL[] = [];
+  if (needle)
+    conditions.push(
+      or(
+        ilike(issues.title, needle),
+        ilike(issues.description, needle),
+        ilike(issues.address, needle),
+      )!,
+    );
   if (input.status) conditions.push(eq(issues.status, input.status));
   if (input.category) conditions.push(eq(issues.category, input.category));
   if (input.priority) conditions.push(eq(issues.priority, input.priority));
@@ -121,6 +143,10 @@ export async function listIssues(input: ListIssuesInput) {
       with: {
         department: true,
         reporter: { columns: { id: true, name: true, image: true } },
+        // The register shows the first photo as the card's thumbnail. Fetched
+        // with the list rather than per card: twelve cards would otherwise be
+        // twelve more round-trips.
+        attachments: true,
       },
       orderBy: { createdAt: "desc" },
       limit: input.limit,
@@ -150,6 +176,33 @@ export async function getIssue(id: string) {
 
   if (!issue) throw new NotFoundError("Issue not found");
   return issue;
+}
+
+/**
+ * One issue by its human-facing number — the public tracking path.
+ *
+ * A citizen holds "#1024", never a UUID, so the tracker and the public API both
+ * come through here rather than each writing the lookup themselves. Returns
+ * null instead of throwing: "no report with that number" is a normal answer to
+ * a typed-in number, not an exceptional one.
+ */
+export async function getIssueByNumber(number: number) {
+  if (!Number.isInteger(number) || number < 1) return null;
+
+  const issue = await db.query.issues.findFirst({
+    where: { number },
+    with: {
+      department: true,
+      reporter: { columns: { id: true, name: true, image: true } },
+      history: true,
+      comments: {
+        with: { author: { columns: { id: true, name: true, image: true } } },
+      },
+      attachments: true,
+    },
+  });
+
+  return issue ?? null;
 }
 
 /** Only the reporter (or an admin) may edit the descriptive fields. */

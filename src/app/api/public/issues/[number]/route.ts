@@ -9,11 +9,8 @@
  * whose payload must be safe to show anyone, and making it role-dependent is
  * how a leak eventually happens.
  */
-import { eq } from "drizzle-orm";
-
-import { db } from "@/db";
-import { issues } from "@/db/schema";
 import { handle, NotFoundError, ValidationError } from "@/lib/http";
+import { getIssueByNumber } from "@/modules/issues/service";
 import { toPublicIssue } from "@/modules/issues/serialize";
 
 export async function GET(
@@ -28,27 +25,7 @@ export async function GET(
       throw new ValidationError("Issue number must be a positive integer");
     }
 
-    const [match] = await db
-      .select({ id: issues.id })
-      .from(issues)
-      .where(eq(issues.number, parsed))
-      .limit(1);
-
-    if (!match) throw new NotFoundError("No issue with that number");
-
-    const issue = await db.query.issues.findFirst({
-      where: { id: match.id },
-      with: {
-        department: true,
-        reporter: { columns: { id: true, name: true, image: true } },
-        history: true,
-        comments: {
-          with: { author: { columns: { id: true, name: true, image: true } } },
-        },
-        attachments: true,
-      },
-    });
-
+    const issue = await getIssueByNumber(parsed);
     if (!issue) throw new NotFoundError("No issue with that number");
     return Response.json(toPublicIssue(issue));
   });

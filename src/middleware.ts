@@ -26,5 +26,5 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Add protected route prefixes here. Everything not listed stays public.
-  matcher: ["/dashboard/:path*", "/settings/:path*"],
+  matcher: ["/admin/:path*", "/dashboard/:path*", "/settings/:path*"],
 };

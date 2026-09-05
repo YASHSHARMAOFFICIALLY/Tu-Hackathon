@@ -71,6 +71,15 @@
   --tint-sky: #dde8f7;
   --tint-lilac: #e7e3f8;
   --tint-sand: #f2e8d8;
+
+  /*
+   * Destructive actions, which so far means one: a restore in "replace" mode,
+   * which wipes the product tables before it writes. The palette had no red
+   * because nothing until now could destroy anything.
+   * Measured: 6.77:1 on white, white on it the same, 5.98:1 on `--danger-tint`.
+   */
+  --danger: #a3352a;
+  --danger-tint: #fbeeeb;
 }
 
 @theme inline {
@@ -90,6 +99,8 @@
   --color-tint-sky: var(--tint-sky);
   --color-tint-lilac: var(--tint-lilac);
   --color-tint-sand: var(--tint-sand);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

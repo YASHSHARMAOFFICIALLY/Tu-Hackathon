@@ -1,3 +1,6 @@
+import { BentoCard } from "@/components/landing/bento-card";
+import { Faq } from "@/components/landing/faq";
+import { Footer } from "@/components/landing/footer";
 import { Hero } from "@/components/landing/hero";
 import { Navbar } from "@/components/landing/navbar";
 
@@ -7,7 +10,10 @@ export default function Page() {
       <Navbar />
       <main>
         <Hero />
+        <BentoCard />
+        <Faq />
       </main>
+      <Footer />
     </>
   );
 }

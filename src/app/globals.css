@@ -21,7 +21,12 @@
    */
   color-scheme: light;
 
-  --canvas: #f4f6f1;
+  /*
+   * Pure white. The page ground was a green-tinted off-white; the colour now
+   * lives in the bento tints below, and a tinted ground behind tinted cards
+   * muddied both. Body copy on white measures 7.87:1.
+   */
+  --canvas: #ffffff;
   --ink: #16241d;
   --body: #46554d;
   /* Decorative hairlines only. Too faint to bound a control: measured 1.26:1. */
@@ -45,6 +50,27 @@
   --brand-hover: #174a35;
   --brand-bright: #2e7d5b;
   --brand-tint: #e3ede6;
+  /*
+   * Type on the `--ink` ground, which the footer is the only user of.
+   * Measured 7.93:1 on `--ink`. `--body` is a canvas colour and measures
+   * 2.04:1 there, so it cannot be reused for this.
+   */
+  --ink-muted: #a9bab1;
+
+  /*
+   * Card tints, matched to the reference comp the user supplied: pastel, not
+   * saturated, and each card fills with a soft gradient rather than a flat
+   * block, which is where that comp's depth actually comes from. A flat
+   * mid-tone tint reads muddy; a pale tint with no gradient reads like a
+   * printing error. The gradient is the difference.
+   *
+   * Body copy measures 6.28:1 or better on every one, headings 12.84:1 or
+   * better, all clear of 4.5:1.
+   */
+  --tint-mint: #dff0e4;
+  --tint-sky: #dde8f7;
+  --tint-lilac: #e7e3f8;
+  --tint-sand: #f2e8d8;
 }
 
 @theme inline {
@@ -59,6 +85,11 @@
   --color-brand-hover: var(--brand-hover);
   --color-brand-bright: var(--brand-bright);
   --color-brand-tint: var(--brand-tint);
+  --color-ink-muted: var(--ink-muted);
+  --color-tint-mint: var(--tint-mint);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-lilac: var(--tint-lilac);
+  --color-tint-sand: var(--tint-sand);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -89,5 +120,97 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   .settle {
     animation: settle 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/*
+ * The status orbit in the "how it works" bento.
+ *
+ * Four stages around a hub, one lit at a time, 2s each: `orbit-node` fills the
+ * circle, `orbit-label` carries its number and caption with it, and
+ * `orbit-arc` steps the leading quarter-arc round in four jumps so the arc is
+ * always on the leg the lit stage is travelling. All four share the 8s period,
+ * offset by an inline `animation-delay`, which is what keeps them in sync
+ * without a timer in JavaScript.
+ *
+ * The resting state is the unlit state, so the diagram is complete and legible
+ * when none of this runs.
+ */
+@keyframes orbit-node {
+  0%,
+  3% {
+    fill: #fff;
+  }
+  6%,
+  24% {
+    fill: var(--color-brand);
+  }
+  28%,
+  100% {
+    fill: #fff;
+  }
+}
+
+@keyframes orbit-label {
+  0%,
+  3% {
+    fill: var(--color-brand);
+  }
+  6%,
+  24% {
+    fill: #fff;
+  }
+  28%,
+  100% {
+    fill: var(--color-brand);
+  }
+}
+
+@keyframes orbit-caption {
+  0%,
+  3% {
+    fill: var(--color-body);
+  }
+  6%,
+  24% {
+    fill: var(--color-ink);
+  }
+  28%,
+  100% {
+    fill: var(--color-body);
+  }
+}
+
+@keyframes orbit-arc {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .orbit-node {
+    animation: orbit-node 8s linear infinite;
+  }
+  .orbit-label {
+    animation: orbit-label 8s linear infinite;
+  }
+  .orbit-caption {
+    animation: orbit-caption 8s linear infinite;
+  }
+  /* steps(4) so the arc jumps a quarter at a time and always sits on the leg
+     the lit stage is on, rather than sliding independently of it. */
+  .orbit-arc {
+    transform-origin: 120px 120px;
+    animation: orbit-arc 8s steps(4) infinite;
+  }
+  .orbit-ring {
+    transform-origin: 120px 120px;
+    animation: orbit-ring 26s linear infinite;
   }
 }

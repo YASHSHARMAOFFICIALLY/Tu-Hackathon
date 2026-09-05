@@ -11,7 +11,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { dbPool } from "@/db/pool";
 import { issueDuplicates, issueHistory, issues } from "@/db/schema";
-import type { IssuePriority, IssueStatus } from "@/db/schema/enums";
+import type {
+  IssueCategory,
+  IssuePriority,
+  IssueStatus,
+} from "@/db/schema/enums";
 import { NotFoundError, ValidationError } from "@/lib/http";
 import { requireRole, type CurrentUser } from "@/modules/auth/permissions";
 
@@ -164,6 +168,81 @@ export async function setPriority(
       oldPriority: issue.priority,
       newPriority: input.priority,
     });
+
+    return updated;
+  });
+}
+
+/**
+ * Applies the AI suggestions to an issue — the officer's "accept" action.
+ *
+ * This is the ONLY path by which an ai_* value becomes a real field. The
+ * officer may accept all of it, or override any part in the same call. Either
+ * way `aiReviewedAt` is stamped, so the dashboard can show what has been
+ * reviewed and what is still waiting on a human.
+ *
+ * Recorded in the timeline as a normal officer action, with a note naming the
+ * AI as the source. A public timeline should never imply a machine decided.
+ */
+export async function applyTriage(
+  issueId: string,
+  overrides: {
+    category?: IssueCategory;
+    priority?: IssuePriority;
+    departmentId?: string | null;
+  } = {},
+) {
+  const user = await requireRole("OFFICER", "ADMIN");
+
+  const issue = await db.query.issues.findFirst({
+    where: { id: issueId },
+    columns: {
+      id: true, status: true, priority: true, departmentId: true,
+      category: true, aiCategory: true, aiPriority: true, aiDepartmentId: true,
+      aiConfidence: true,
+    },
+  });
+  if (!issue) throw new NotFoundError("Issue not found");
+  assertCanAct(user, issue.departmentId);
+
+  if (!issue.aiCategory && !overrides.category) {
+    throw new ValidationError("No AI suggestions to apply for this issue");
+  }
+
+  const category = overrides.category ?? issue.aiCategory ?? issue.category;
+  const priority = overrides.priority ?? issue.aiPriority ?? issue.priority;
+  const departmentId =
+    overrides.departmentId !== undefined
+      ? overrides.departmentId
+      : (issue.aiDepartmentId ?? issue.departmentId);
+
+  const accepted =
+    !overrides.category && !overrides.priority && overrides.departmentId === undefined;
+
+  return dbPool.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(issues)
+      .set({ category, priority, departmentId, aiReviewedAt: new Date(), updatedAt: new Date() })
+      .where(eq(issues.id, issueId))
+      .returning();
+
+    const events: (typeof issueHistory.$inferInsert)[] = [];
+    if (priority !== issue.priority) {
+      events.push({
+        issueId, actorId: user.id, event: "PRIORITY_CHANGED",
+        oldPriority: issue.priority, newPriority: priority,
+        note: accepted
+          ? `Accepted AI triage (confidence ${issue.aiConfidence ?? "n/a"}%).`
+          : "Set during triage review.",
+      });
+    }
+    if (departmentId !== issue.departmentId) {
+      events.push({
+        issueId, actorId: user.id, event: "DEPARTMENT_CHANGED",
+        note: accepted ? "Routed following AI triage." : "Routed during triage review.",
+      });
+    }
+    if (events.length > 0) await tx.insert(issueHistory).values(events);
 
     return updated;
   });

@@ -16,6 +16,7 @@ import {
   type CurrentUser,
 } from "@/modules/auth/permissions";
 import { NotFoundError, ValidationError } from "@/lib/http";
+import { enrichIssue } from "@/modules/ai/enrich";
 
 import type {
   CreateIssueInput,
@@ -30,7 +31,7 @@ import type {
 export async function createIssue(input: CreateIssueInput) {
   const user = await requireRole("CITIZEN", "OFFICER", "ADMIN");
 
-  return dbPool.transaction(async (tx) => {
+  const issue = await dbPool.transaction(async (tx) => {
     const [issue] = await tx
       .insert(issues)
       .values({
@@ -78,6 +79,13 @@ export async function createIssue(input: CreateIssueInput) {
 
     return issue;
   });
+
+  // AI triage and embedding run AFTER the transaction commits, deliberately
+  // unawaited: the report is already saved, and a slow or failing model must
+  // never delay or reject a citizen reporting a hazard.
+  void enrichIssue(issue.id);
+
+  return issue;
 }
 
 /** Filtered, paginated list. Public — anonymous callers get results too. */

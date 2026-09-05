@@ -1,36 +1,174 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Public Issue Resolution Tracker
 
-## Getting Started
+Citizens report public issues; authorities triage, assign and resolve them; the
+public follows progress. Built for **TEZHACK 2026** — Team CUCKOO (ID 69),
+problem **WEB03**, challenge **WEB-C16 (Backup and Restore)**.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router) · TypeScript · Drizzle ORM v1 · Neon Postgres
+· Better Auth (Google) · Tailwind v4 · Bun
+
+---
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+cp .env.example .env.local          # then fill in the values below
+bun run db:migrate                  # create the schema
+bun run db:seed:departments         # 5 departments
+bun run db:seed:demo                # ~50 realistic issues (optional)
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sign in at `/sign-in`, then make yourself an admin:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+bun run db:admin you@example.com    # you must have signed in at least once
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Environment variables
 
-## Learn More
+| Variable | Where it comes from |
+|---|---|
+| `DATABASE_URL` | Neon Console → your project → Connection Details (pooled string) |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | `http://localhost:3000` locally; the real origin in production |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web) |
 
-To learn more about Next.js, take a look at the following resources:
+Google's **Authorised redirect URI** must be exactly:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+http://localhost:3000/api/auth/callback/google
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | Does |
+|---|---|
+| `bun dev` | Next dev server |
+| `bun run build` | Production build (also regenerates typed routes) |
+| `bun run lint` | ESLint |
+| `bun run test` | Unit tests — destructive backup tests are skipped |
+| `bun run test:backup` | ⚠️ **Wipes** the database in `DATABASE_URL`, then round-trips it |
+| `bun run db:generate` | Write a migration from schema changes |
+| `bun run db:migrate` | Apply pending migrations |
+| `bun run db:check` | Fail if schema and migrations disagree |
+| `bun run db:studio` | Browse the database |
+| `bun run db:admin <email>` | Promote a signed-in user to ADMIN |
+| `bun run db:seed:departments` | Seed the 5 departments (idempotent) |
+| `bun run db:seed:demo` | Seed ~50 demo issues (deterministic, re-runnable) |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Project layout
+
+```
+src/
+  app/            routes only — thin, no business logic
+    api/
+  lib/http.ts     errors → status codes
+  db/             INFRASTRUCTURE: clients, relations, migrations, shared enums
+  modules/        FEATURE MODULES — each owns its tables, services and tests
+    auth/         Better Auth, sessions, roles, permissions
+    departments/
+    issues/       schema, services, workflow, duplicate search, serialisation
+    dashboard/
+    backup/       export, validation, restore  ← the graded challenge
+```
+
+Two rules keep this working with several contributors:
+
+1. **A module owns its tables.** New table → new file in
+   `src/modules/<feature>/schema/`, then re-export it from
+   `src/db/schema/index.ts` or drizzle-kit will not see it.
+2. **Services never touch `Request`/`Response`.** Routes translate HTTP;
+   services own the rules. That is what lets the backup module reuse them.
+
+---
+
+## API
+
+### Public
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/issues` | filtered, paginated (`status`, `category`, `priority`, `departmentId`, `mine`, `limit`, `offset`) |
+| `GET` | `/api/issues/:id` | issue + timeline |
+| `GET` | `/api/public/issues/:number` | track by the reference number a citizen was given |
+
+### Signed in
+
+| Method | Path | Role |
+|---|---|---|
+| `GET` | `/api/me` | any |
+| `POST` | `/api/issues` | CITIZEN+ |
+| `POST` | `/api/issues/check-duplicates` | CITIZEN+ — call before creating |
+| `PATCH` | `/api/issues/:id` | reporter or ADMIN |
+| `POST` | `/api/issues/:id/comments` | CITIZEN+ (internal notes: OFFICER+) |
+| `PATCH` | `/api/issues/:id/status` | OFFICER+ |
+| `PATCH` | `/api/issues/:id/assign` | OFFICER+ |
+| `PATCH` | `/api/issues/:id/priority` | OFFICER+ |
+| `POST`/`DELETE` | `/api/issues/:id/duplicates` | OFFICER+ |
+| `GET` | `/api/dashboard` | OFFICER+ |
+| `GET` | `/api/admin/backup/export` | ADMIN |
+| `POST` | `/api/admin/backup/preview` | ADMIN |
+| `POST` | `/api/admin/backup/restore` | ADMIN |
+
+Officers act only on issues in their own department; an untriaged issue (no
+department yet) is open to any officer.
+
+---
+
+## Backup and restore (WEB-C16)
+
+```bash
+# export
+curl -b cookies.txt http://localhost:3000/api/admin/backup/export -o backup.json
+
+# preview — validates, writes nothing
+curl -b cookies.txt -X POST http://localhost:3000/api/admin/backup/preview \
+  -H 'content-type: application/json' --data-binary @backup.json
+
+# restore into an empty database
+curl -b cookies.txt -X POST 'http://localhost:3000/api/admin/backup/restore' \
+  -H 'content-type: application/json' --data-binary @backup.json
+```
+
+**What is never exported:** `account` (live Google access/refresh tokens),
+`session`, `verification`, `rate_limit`. The backup carries **zero credentials**
+and still restores a working app — users keep their original ids so every
+foreign key resolves, and they re-link to Google by verified email on their next
+sign-in.
+
+`?redactEmails=true` replaces emails with stable hashed placeholders when the
+file has to leave trusted hands.
+
+`?mode=replace` wipes and restores inside one transaction. The default,
+`empty-only`, refuses a database that already holds issues.
+
+### The empty copy for the demo
+
+Use a Neon branch rather than deleting anything:
+
+1. Neon Console → your project → **Branches** → **New branch** from `main`
+2. Connect to it and run `bun run db:migrate` (schema only, no data)
+3. Point `DATABASE_URL` at the branch and restore `backup.json` into it
+
+Your working database is never touched, and the branch is a genuinely empty
+copy — which is exactly what the challenge asks for.
+
+---
+
+## Testing
+
+```bash
+bun run test          # fast, safe, runs on every change
+bun run test:backup   # DESTRUCTIVE — point DATABASE_URL at a branch first
+```
+
+`test:backup` is the WEB-C16 claim in executable form: export → wipe → restore →
+every row, id and relationship verified, plus two rollback paths (a corrupt
+reference caught before any write, and a constraint violation caught mid-INSERT
+that rolls the whole restore back).

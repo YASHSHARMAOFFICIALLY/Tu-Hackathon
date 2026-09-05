@@ -2,12 +2,21 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import {
+  AlertIcon,
+  CheckIcon,
+  ClockIcon,
+  ListIcon,
+  ReportIcon,
+} from "@/components/app/icons";
+import { AppShell, type NavItem } from "@/components/app/shell";
+import {
   Categories,
   Departments,
   IssueList,
   OverTime,
   Panel,
   Stat,
+  StatusBand,
   type IssueRow,
 } from "@/components/dashboard/pieces";
 import { getCurrentUser } from "@/modules/auth/permissions";
@@ -30,6 +39,11 @@ export const metadata = { title: "Dashboard" };
  * aggregates (the service calls `requireRole("OFFICER","ADMIN")` itself), so
  * asking for them would throw rather than render an empty page.
  *
+ * Both sit inside `AppShell`, which is the rail every signed-in screen shares.
+ * The nav is built here rather than inside the shell because it is role-shaped:
+ * the backup console is an admin tool and a citizen must not see a link to a
+ * page that will refuse them.
+ *
  * Every figure here comes from the database. There is no invented metric, no
  * "+12% this week" delta with nothing behind it, and no map: coordinates are
  * deliberately rounded to about a kilometre in the public shape, and a map with
@@ -37,66 +51,72 @@ export const metadata = { title: "Dashboard" };
  */
 export default async function DashboardPage() {
   const user = await getCurrentUser();
+
   if (!user) redirect("/sign-in?redirectTo=/dashboard");
 
   const name = user.displayName ?? user.name;
   const isAuthority = user.role === "OFFICER" || user.role === "ADMIN";
 
+  const nav: NavItem[] = [
+    { href: "/", label: "Home", icon: "home" },
+    { href: "/dashboard", label: "Dashboard", icon: "chart" },
+    { href: "/report", label: "Report an issue", icon: "report" },
+    { href: "/issues", label: "All issues", icon: "list" },
+    { href: "/track", label: "Track a report", icon: "pin" },
+    ...(user.role === "ADMIN"
+      ? [{ href: "/admin/backup", label: "Backup", icon: "archive" } as const]
+      : []),
+  ];
+
   return (
-    <div className="flex min-h-[100svh] flex-col">
-      <header className="bg-ink">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-5 md:px-8">
-          <Link
-            href="/"
-            className="text-canvas inline-flex items-center gap-2 rounded-lg text-[0.9375rem] font-semibold tracking-[-0.01em] focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            CivicTrack
-          </Link>
-          <span aria-hidden="true" className="text-ink-muted">
-            /
-          </span>
-          <span className="text-ink-muted text-[0.9375rem]">Dashboard</span>
-
-          <div className="ml-auto flex items-center gap-5">
-            {user.role === "ADMIN" ? (
-              <Link
-                href="/admin/backup"
-                className="text-ink-muted hover:text-canvas rounded text-[0.8125rem] transition-colors focus-visible:ring-2 focus-visible:ring-canvas focus-visible:outline-none"
-              >
-                Backup
-              </Link>
-            ) : null}
-            <p className="text-ink-muted hidden text-[0.8125rem] sm:block">
-              {name} · <span className="font-mono">{user.role}</span>
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-10 md:px-8 md:py-14">
+    <AppShell nav={nav} user={{ name, role: user.role }} title="Dashboard">
+      <div className="mx-auto w-full max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div>
-            <h1 className="text-ink text-[clamp(1.625rem,3vw,2.25rem)] leading-[1.1] font-bold tracking-[-0.03em]">
-              {isAuthority ? "Authority dashboard" : `Welcome back, ${name}`}
+            <h1 className="text-ink text-[clamp(1.5rem,2.4vw,2rem)] leading-[1.1] font-bold tracking-[-0.03em]">
+              {greeting()}, {name.split(" ")[0]}
             </h1>
-            <p className="text-body mt-2 text-[1rem] leading-[1.55]">
+            <p className="text-body mt-2 text-[0.9375rem] leading-[1.55]">
               {isAuthority
                 ? "Every report in the register, counted where it stands right now."
                 : "The reports you have filed, and where each one has got to."}
             </p>
           </div>
-          <Link
-            href="/report"
-            className="bg-brand hover:bg-brand-hover inline-flex h-12 items-center rounded-xl px-6 text-[0.9375rem] font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
-          >
-            Report an issue
-          </Link>
+          {/* The rail already carries "report an issue" in brand green, so this
+              is not a second copy of it: an officer's next move is the
+              register, a citizen's is the form. */}
+          {isAuthority ? (
+            <Link
+              href="/issues"
+              className="border-field text-ink hover:bg-canvas inline-flex h-11 items-center gap-2 rounded-xl border bg-white px-5 text-[0.9375rem] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <ListIcon className="size-[18px]" />
+              Open the register
+            </Link>
+          ) : (
+            <Link
+              href="/report"
+              className="bg-brand hover:bg-brand-hover inline-flex h-11 items-center gap-2 rounded-xl px-5 text-[0.9375rem] font-medium text-white transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <ReportIcon className="size-[18px]" />
+              Report an issue
+            </Link>
+          )}
         </div>
 
         {isAuthority ? <Authority /> : <Citizen />}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
+}
+
+/** Server-rendered, so this is the server's hour. Close enough for a greeting,
+ *  and a client component for it would cost a hydration boundary. */
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
 /* ── Authority ──────────────────────────────────────────────── */
@@ -115,55 +135,65 @@ async function Authority() {
       ? "Nothing resolved yet"
       : `Average ${summary.averageResolutionHours} hours from report to resolution`;
 
+  const share = (n: number) =>
+    summary.total === 0
+      ? undefined
+      : `${Math.round((n / summary.total) * 100)}% of the register`;
+
   return (
     <>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Reports in the register" value={summary.total} />
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat
+          label="Reports in the register"
+          value={summary.total}
+          icon={<ReportIcon className="size-5" />}
+          tint="mint"
+          hint="Every report ever filed, in any state"
+        />
         <Stat
           label="Open"
           value={summary.open}
-          hint="Submitted, acknowledged or in progress"
+          icon={<ClockIcon className="size-5" />}
+          tint="sand"
+          hint={share(summary.open) ?? "Submitted, acknowledged or in progress"}
         />
         <Stat
           label="High priority, still open"
           value={summary.highPriority}
+          icon={<AlertIcon className="size-5" />}
+          tint="lilac"
           tone={summary.highPriority > 0 ? "danger" : "ink"}
+          hint={
+            summary.highPriority > 0
+              ? "Waiting on a department right now"
+              : "Nothing urgent is outstanding"
+          }
         />
         <Stat
           label="Resolved"
           value={summary.resolved}
+          icon={<CheckIcon className="size-5" />}
+          tint="sky"
           tone="brand"
           hint={resolutionHint}
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel title="Reports filed, last 30 days">
           <OverTime data={summary.overTime} />
         </Panel>
 
         <Panel title="Where reports stand">
-          <ul className="divide-line mt-4 divide-y">
-            {(
-              [
-                ["Submitted", summary.submitted],
-                ["Acknowledged", summary.acknowledged],
-                ["In progress", summary.inProgress],
-                ["Resolved", summary.resolved],
-                ["Rejected", summary.rejected],
-              ] as const
-            ).map(([label, count]) => (
-              <li
-                key={label}
-                className="flex items-baseline justify-between py-2.5"
-              >
-                <span className="text-body text-[0.875rem]">{label}</span>
-                <span className="text-ink font-mono text-[0.9375rem] tabular-nums">
-                  {count}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <StatusBand
+            rows={[
+              { status: "SUBMITTED", count: summary.submitted },
+              { status: "ACKNOWLEDGED", count: summary.acknowledged },
+              { status: "IN_PROGRESS", count: summary.inProgress },
+              { status: "RESOLVED", count: summary.resolved },
+              { status: "REJECTED", count: summary.rejected },
+            ]}
+          />
         </Panel>
 
         <Panel title="By category">
@@ -178,7 +208,7 @@ async function Authority() {
       <Panel
         title="Latest reports"
         action={{ href: "/issues", label: "See all" }}
-        className="mt-6"
+        className="mt-5"
       >
         <IssueList
           issues={rows}
@@ -209,21 +239,43 @@ async function Citizen() {
 
   return (
     <>
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <Stat label="Reports you have filed" value={mine.total} />
-        <Stat label="Still open" value={open} />
-        <Stat label="Resolved" value={resolved} tone="brand" />
+      <div className="mt-7 grid gap-4 sm:grid-cols-3">
+        <Stat
+          label="Reports you have filed"
+          value={mine.total}
+          icon={<ReportIcon className="size-5" />}
+          tint="mint"
+        />
+        <Stat
+          label="Still open"
+          value={open}
+          icon={<ClockIcon className="size-5" />}
+          tint="sand"
+        />
+        <Stat
+          label="Resolved"
+          value={resolved}
+          icon={<CheckIcon className="size-5" />}
+          tint="sky"
+          tone="brand"
+        />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <Panel title="Your reports" action={{ href: "/track", label: "Track by number" }}>
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Panel
+          title="Your reports"
+          action={{ href: "/track", label: "Track by number" }}
+        >
           <IssueList
             issues={rows}
             empty="You have not filed a report yet. When you do, it appears here with its reference number and its status."
           />
         </Panel>
 
-        <Panel title="Recently filed nearby" action={{ href: "/issues", label: "See all" }}>
+        <Panel
+          title="Recently filed nearby"
+          action={{ href: "/issues", label: "See all" }}
+        >
           <IssueList
             issues={recent.issues.map(toPublicIssue)}
             empty="Nothing has been reported yet."

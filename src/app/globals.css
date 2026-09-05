@@ -67,6 +67,13 @@
    * Body copy measures 6.28:1 or better on every one, headings 12.84:1 or
    * better, all clear of 4.5:1.
    */
+  /*
+   * The application ground behind the signed-in shell. White cards on a white
+   * page have no edge, so the dashboard needs a surface a shade under the
+   * canvas to sit on. Body copy measures 7.6:1 here.
+   */
+  --surface: #f5f8f6;
+
   --tint-mint: #dff0e4;
   --tint-sky: #dde8f7;
   --tint-lilac: #e7e3f8;
@@ -124,6 +131,7 @@
   --color-brand-bright: var(--brand-bright);
   --color-brand-tint: var(--brand-tint);
   --color-ink-muted: var(--ink-muted);
+  --color-surface: var(--surface);
   --color-tint-mint: var(--tint-mint);
   --color-tint-sky: var(--tint-sky);
   --color-tint-lilac: var(--tint-lilac);

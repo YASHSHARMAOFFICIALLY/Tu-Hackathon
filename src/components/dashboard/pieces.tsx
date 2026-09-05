@@ -19,26 +19,34 @@ import { cn } from "@/lib/utils";
 
 /* ── Status ─────────────────────────────────────────────────── */
 
-const STATUS: Record<IssueStatus, { label: string; className: string }> = {
+const STATUS: Record<
+  IssueStatus,
+  { label: string; className: string; fill: string }
+> = {
   SUBMITTED: {
     label: "Submitted",
     className: "bg-status-submitted-tint text-status-submitted",
+    fill: "bg-status-submitted",
   },
   ACKNOWLEDGED: {
     label: "Acknowledged",
     className: "bg-status-acknowledged-tint text-status-acknowledged",
+    fill: "bg-status-acknowledged",
   },
   IN_PROGRESS: {
     label: "In progress",
     className: "bg-status-progress-tint text-status-progress",
+    fill: "bg-status-progress",
   },
   RESOLVED: {
     label: "Resolved",
     className: "bg-status-resolved-tint text-status-resolved",
+    fill: "bg-status-resolved",
   },
   REJECTED: {
     label: "Rejected",
     className: "bg-status-rejected-tint text-status-rejected",
+    fill: "bg-status-rejected",
   },
 };
 
@@ -71,33 +79,137 @@ export const CATEGORY: Record<IssueCategory, { label: string; color: string }> =
 
 /* ── Stat tile ──────────────────────────────────────────────── */
 
+/**
+ * A tinted tile, an icon on a white disc, the figure, and one line of context.
+ *
+ * The tint is the card's only edge, matching the bento on the landing page, so
+ * the four tiles read as one band rather than four boxes. There is no "+12%
+ * this week" here and there will not be: the aggregate query returns a count,
+ * not a trend, and a delta with nothing behind it is decoration that lies.
+ * `hint` carries a figure the database actually knows.
+ */
 export function Stat({
   label,
   value,
   hint,
+  icon,
+  tint = "mint",
   tone = "ink",
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  icon?: React.ReactNode;
+  tint?: "mint" | "sky" | "lilac" | "sand";
   tone?: "ink" | "brand" | "danger";
 }) {
+  const TINT = {
+    mint: "bg-tint-mint",
+    sky: "bg-tint-sky",
+    lilac: "bg-tint-lilac",
+    sand: "bg-tint-sand",
+  } as const;
+
   return (
-    <div className="border-line rounded-2xl border bg-white px-5 py-5">
-      <p className="text-body text-[0.8125rem]">{label}</p>
-      <p
-        className={cn(
-          "mt-2 font-mono text-[1.75rem] leading-none font-semibold tabular-nums",
-          tone === "brand"
-            ? "text-brand"
-            : tone === "danger"
-              ? "text-danger"
-              : "text-ink",
-        )}
+    <div
+      className={cn(
+        "rounded-2xl p-5 transition-transform duration-300 motion-safe:hover:-translate-y-0.5",
+        TINT[tint],
+      )}
+    >
+      <div className="flex items-center gap-3">
+        {icon ? (
+          <span className="text-brand flex size-10 shrink-0 items-center justify-center rounded-xl bg-white">
+            {icon}
+          </span>
+        ) : null}
+        <div className="min-w-0">
+          <p
+            className={cn(
+              "font-mono text-[1.625rem] leading-none font-semibold tabular-nums",
+              tone === "brand"
+                ? "text-brand"
+                : tone === "danger"
+                  ? "text-danger"
+                  : "text-ink",
+            )}
+          >
+            {value}
+          </p>
+          <p className="text-body mt-1.5 truncate text-[0.8125rem]">{label}</p>
+        </div>
+      </div>
+      {hint ? (
+        <p className="text-body mt-3 text-[0.75rem] leading-[1.5]">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
+
+/* ── Status band ────────────────────────────────────────────── */
+
+/**
+ * Where every report stands, as one stacked bar plus its key.
+ *
+ * Five separate rows of "label … count" answered "how many are acknowledged"
+ * and nothing else. The question an officer actually opens this for is how the
+ * register is distributed, which is a part-to-whole, so the parts share a bar.
+ * The counts stay in the key: the bar carries the shape, the numbers carry the
+ * fact.
+ */
+export function StatusBand({
+  rows,
+}: {
+  rows: { status: IssueStatus; count: number }[];
+}) {
+  const total = rows.reduce((sum, r) => sum + r.count, 0);
+
+  if (total === 0) {
+    return <Empty>No reports have been filed, so there is nothing to divide.</Empty>;
+  }
+
+  return (
+    <div className="mt-5">
+      <div
+        className="bg-surface flex h-3 gap-0.5 overflow-hidden rounded-full"
+        role="img"
+        aria-label={rows
+          .map((r) => `${STATUS[r.status].label} ${r.count}`)
+          .join(", ")}
       >
-        {value}
-      </p>
-      {hint ? <p className="text-body mt-2 text-[0.75rem]">{hint}</p> : null}
+        {rows
+          .filter((r) => r.count > 0)
+          .map((r) => (
+            <span
+              key={r.status}
+              className={STATUS[r.status].fill}
+              style={{ width: `${(r.count / total) * 100}%` }}
+            >
+              <title>{`${STATUS[r.status].label}: ${r.count}`}</title>
+            </span>
+          ))}
+      </div>
+
+      <ul className="divide-line mt-4 divide-y">
+        {rows.map((r) => (
+          <li
+            key={r.status}
+            className="flex items-center gap-3 py-2.5 text-[0.875rem]"
+          >
+            <span
+              aria-hidden="true"
+              className={cn("size-2.5 shrink-0 rounded-full", STATUS[r.status].fill)}
+            />
+            <span className="text-body">{STATUS[r.status].label}</span>
+            <span className="text-ink ml-auto font-mono tabular-nums">
+              {r.count}
+            </span>
+            <span className="text-body w-10 text-right font-mono text-[0.8125rem] tabular-nums">
+              {Math.round((r.count / total) * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -138,7 +250,9 @@ export function OverTime({
   }
 
   const W = 640;
-  const H = 150;
+  // Taller than the 150 it started at: the panel beside it is a five-row list,
+  // and a short chart left a band of empty card under the bars.
+  const H = 200;
   const slot = W / days.length;
   const barW = Math.max(4, slot - 4);
 

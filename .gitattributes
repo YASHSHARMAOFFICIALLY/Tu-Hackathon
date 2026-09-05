@@ -1,0 +1,4 @@
+# Drizzle writes a full schema snapshot next to every migration and regenerates
+# it wholesale each time. Collapse it in review so PRs show the SQL that matters.
+# (v1 layout: <out>/<timestamp>_<name>/snapshot.json — older docs say meta/*.)
+src/db/migrations/**/snapshot.json linguist-generated=true

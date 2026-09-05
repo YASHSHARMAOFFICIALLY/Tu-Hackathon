@@ -37,6 +37,8 @@ export type CurrentUser = {
   image: string | null;
   role: UserRole;
   displayName: string | null;
+  /** Department an OFFICER acts for. Null for citizens and admins. */
+  departmentId: string | null;
 };
 
 /**
@@ -50,7 +52,11 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!session) return null;
 
   const [profile] = await db
-    .select({ role: profiles.role, displayName: profiles.displayName })
+    .select({
+      role: profiles.role,
+      displayName: profiles.displayName,
+      departmentId: profiles.departmentId,
+    })
     .from(profiles)
     .where(eq(profiles.userId, session.user.id))
     .limit(1);
@@ -64,6 +70,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     // least privileged role rather than assuming — never fail open.
     role: profile?.role ?? "CITIZEN",
     displayName: profile?.displayName ?? null,
+    departmentId: profile?.departmentId ?? null,
   };
 });
 

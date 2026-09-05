@@ -80,3 +80,24 @@ export const createCommentSchema = z.object({
   /** Officer-only note, kept off the public timeline. Ignored for citizens. */
   isInternal: z.boolean().default(false),
 });
+
+/** Status transition. The note is required for RESOLVED/REJECTED — enforced in workflow.ts. */
+export const transitionStatusSchema = z.object({
+  status: statusSchema,
+  note: z.string().trim().min(3).max(2000).optional(),
+});
+
+/** Assignment. Null clears the field; omitted leaves it untouched. */
+export const assignIssueSchema = z
+  .object({
+    assignedTo: z.string().min(1).nullable().optional(),
+    departmentId: z.uuid().nullable().optional(),
+  })
+  .refine(
+    (v) => v.assignedTo !== undefined || v.departmentId !== undefined,
+    { message: "Provide assignedTo or departmentId" },
+  );
+
+export const setPrioritySchema = z.object({ priority: prioritySchema });
+
+export const linkDuplicateSchema = z.object({ duplicateIssueId: z.uuid() });

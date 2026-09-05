@@ -21,7 +21,7 @@ export function GoogleSignInButton({ callbackURL = "/" }: { callbackURL?: string
     <button
       type="button"
       disabled={pending}
-      className="border-line text-ink hover:bg-brand-tint/50 flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-white text-[0.9375rem] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
+      className="border-field text-ink hover:bg-brand-tint/50 flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-white text-[0.9375rem] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
       onClick={async () => {
         setPending(true);
         await signIn.social({ provider: "google", callbackURL });

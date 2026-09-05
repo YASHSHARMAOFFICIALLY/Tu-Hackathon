@@ -12,10 +12,34 @@
  * `--canvas` is 4.6:1; `--body` on `--canvas` is 7.3:1. All clear WCAG AA.
  */
 :root {
+  /*
+   * This surface is light on purpose rather than by default: it is a public
+   * civic register, read in daylight, and the hero photograph is a sunrise.
+   * Declaring the scheme stops the browser rendering form controls and
+   * scrollbars in dark UA styling for a visitor whose OS is set to dark, which
+   * would put dark inputs on a light page.
+   */
+  color-scheme: light;
+
   --canvas: #f4f6f1;
   --ink: #16241d;
   --body: #46554d;
+  /* Decorative hairlines only. Too faint to bound a control: measured 1.26:1. */
   --line: #16241d1f;
+  /*
+   * Boundaries of interactive components (inputs, outline buttons). WCAG 1.4.11
+   * wants 3:1 for these and the hairline above does not come close.
+   * Measured 3.61:1 on white, 3.32:1 on canvas.
+   */
+  --field: #7c8a82;
+  /*
+   * Placeholders are body text and need the full 4.5:1, not a faded body
+   * colour. The previous 55%-alpha body measured 2.62:1 on white.
+   * Measured 4.85:1.
+   */
+  --placeholder: #66756d;
+  /* Outline-button border at 3.30:1 on white. */
+  --brand-line: #6d9686;
 
   --brand: #1f5c42;
   --brand-hover: #174a35;
@@ -28,6 +52,9 @@
   --color-ink: var(--ink);
   --color-body: var(--body);
   --color-line: var(--line);
+  --color-field: var(--field);
+  --color-placeholder: var(--placeholder);
+  --color-brand-line: var(--brand-line);
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-bright: var(--brand-bright);

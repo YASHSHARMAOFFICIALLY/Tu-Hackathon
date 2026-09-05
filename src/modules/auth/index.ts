@@ -10,8 +10,8 @@ import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
 import { dbPool } from "@/db/pool";
-import * as authSchema from "@/db/schema/auth";
-import { profiles } from "@/db/schema/profiles";
+import * as authSchema from "@/modules/auth/schema/auth";
+import { profiles } from "@/modules/auth/schema/profiles";
 import { env } from "@/env";
 
 export const auth = betterAuth({

@@ -1,7 +1,7 @@
 /**
  * Better Auth tables — GENERATED. Do not hand-edit the table definitions.
  * Regenerate with:
- *   bunx @better-auth/cli generate --config src/auth/index.ts --output src/db/schema/auth.ts
+ *   bunx @better-auth/cli generate --config src/auth/index.ts --output src/modules/auth/schema/auth.ts
  *
  * Two manual fixes are applied after every regeneration (the CLI still emits
  * the drizzle v0 API, which v1 removed):

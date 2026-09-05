@@ -28,10 +28,12 @@ export default async function SignInPage({
   const { redirectTo } = await searchParams;
   // Only accept an internal path. An absolute URL here would let a crafted link
   // bounce a freshly signed-in user to another origin.
+  // Signing in with nowhere particular to go lands on the dashboard: it is the
+  // one screen that differs by role and is useful the moment you arrive.
   const callbackURL =
     typeof redirectTo === "string" && redirectTo.startsWith("/")
       ? redirectTo
-      : "/";
+      : "/dashboard";
 
   return (
     <main className="grid min-h-[100svh] lg:grid-cols-2">

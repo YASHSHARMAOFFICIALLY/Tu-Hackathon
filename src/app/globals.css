@@ -80,6 +80,35 @@
    */
   --danger: #a3352a;
   --danger-tint: #fbeeeb;
+
+  /*
+   * Status palette. Reserved for issue state and never reused as a chart
+   * series colour. Each pairs a text colour with its own tint; measured, in
+   * order: 6.34, 5.66, 5.19, 6.57, 5.98 : 1.
+   */
+  --status-submitted: #4a5b53;
+  --status-submitted-tint: #eef1ef;
+  --status-acknowledged: #245ea3;
+  --status-acknowledged-tint: #e8eff8;
+  --status-progress: #8a5a06;
+  --status-progress-tint: #f7efe1;
+  --status-resolved: #1f5c42;
+  --status-resolved-tint: #e3ede6;
+  --status-rejected: #a3352a;
+  --status-rejected-tint: #fbeeeb;
+
+  /*
+   * Categorical chart hues, one per issue category, assigned in fixed order and
+   * never cycled. Validated with the dataviz palette checker: lightness band,
+   * chroma floor, CVD separation (worst adjacent pair dE 11.4 deutan),
+   * normal-vision floor (19.3) and 3:1 against the surface all pass.
+   */
+  --cat-roads: #2f8a5c;
+  --cat-water: #3273c4;
+  --cat-electricity: #b8790c;
+  --cat-sanitation: #8a5cc4;
+  --cat-safety: #159fa8;
+  --cat-other: #b0563f;
 }
 
 @theme inline {
@@ -101,6 +130,16 @@
   --color-tint-sand: var(--tint-sand);
   --color-danger: var(--danger);
   --color-danger-tint: var(--danger-tint);
+  --color-status-submitted: var(--status-submitted);
+  --color-status-submitted-tint: var(--status-submitted-tint);
+  --color-status-acknowledged: var(--status-acknowledged);
+  --color-status-acknowledged-tint: var(--status-acknowledged-tint);
+  --color-status-progress: var(--status-progress);
+  --color-status-progress-tint: var(--status-progress-tint);
+  --color-status-resolved: var(--status-resolved);
+  --color-status-resolved-tint: var(--status-resolved-tint);
+  --color-status-rejected: var(--status-rejected);
+  --color-status-rejected-tint: var(--status-rejected-tint);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

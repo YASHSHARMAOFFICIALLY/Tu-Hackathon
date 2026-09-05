@@ -13,7 +13,8 @@
     "db:check": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs check",
     "test": "bun --env-file=.env.local test",
     "db:admin": "bun run src/modules/auth/seed-admin.ts",
-    "db:seed:departments": "bun run src/modules/departments/seed.ts"
+    "db:seed:departments": "bun run src/modules/departments/seed.ts",
+    "test:backup": "ALLOW_DESTRUCTIVE_TESTS=1 bun --env-file=.env.local test src/modules/backup"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

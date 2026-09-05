@@ -48,13 +48,15 @@ export function Hero() {
         fold, clearing to nothing over the bottom 260px, so the photograph is
         visible through the entire hero instead of being painted out behind the
         copy.
-        Contrast still holds at the cap. Ink on 80% canvas over the palest and
-        the darkest thing the crop can put under the text measures 12.9:1 and
-        11.5:1 respectively, both far clear of the 4.5:1 floor.
+        Contrast still holds at the cap. Ink on the previous 80% green-tinted
+        canvas measured 12.9:1 and 11.5:1 over the palest and the darkest thing
+        the crop can put under the text. The veil is now pure white, which is
+        lighter than that tint, so the composite under the text can only be
+        paler and those figures are a floor, not a claim to re-measure.
       */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(244,246,241,0)_0px,rgba(244,246,241,0.14)_70px,rgba(244,246,241,0.58)_180px,rgba(244,246,241,0.78)_285px,rgba(244,246,241,0.82)_100%)]"
+        className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,rgba(255,255,255,0)_0px,rgba(255,255,255,0.14)_70px,rgba(255,255,255,0.58)_180px,rgba(255,255,255,0.78)_285px,rgba(255,255,255,0.82)_100%)]"
       />
 
       <div className="mx-auto w-full max-w-[1440px] px-4 pt-[2vh] pb-[10rem] text-center md:px-8">

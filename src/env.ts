@@ -43,7 +43,18 @@ export const env = {
   GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
   GEMINI_EMBEDDING_MODEL:
     process.env.GEMINI_EMBEDDING_MODEL ?? "text-embedding-004",
+
+  /**
+   * Vercel Blob read-write token, injected by Vercel once the store is linked
+   * to the project. OPTIONAL for the same reason as the Gemini key: a missing
+   * token must degrade to "photos cannot be attached", never to a report that
+   * cannot be filed. Evidence is valuable; the report is essential.
+   */
+  BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN ?? "",
 } as const;
 
 /** Whether AI features are configured. Everything AI checks this first. */
 export const aiEnabled = env.GEMINI_API_KEY.length > 0;
+
+/** Whether photo evidence can be stored. The upload route checks this first. */
+export const uploadsEnabled = env.BLOB_READ_WRITE_TOKEN.length > 0;

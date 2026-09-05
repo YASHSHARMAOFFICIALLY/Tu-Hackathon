@@ -85,4 +85,46 @@ describe("authority payload", () => {
     expect(auth.comments).toHaveLength(2);
     expect(auth.latitude).toBe(26.701234);
   });
+
+  test("carries the AI suggestions an officer reviews", () => {
+    const auth = toAuthorityIssue({
+      ...issue,
+      aiPriority: "CRITICAL",
+      aiPriorityScore: 91,
+      aiSummary: "Open manhole on a school route.",
+      aiConfidence: 78,
+    } as IssueWithRelations);
+
+    expect(auth.ai.priority).toBe("CRITICAL");
+    expect(auth.ai.priorityScore).toBe(91);
+    expect(auth.ai.confidence).toBe(78);
+    // Unstamped until an officer accepts or overrides: this field is the whole
+    // difference between "a human looked" and "a model guessed".
+    expect(auth.ai.reviewedAt).toBeNull();
+  });
+});
+
+describe("AI suggestions never reach the public shape", () => {
+  const withAi = {
+    ...issue,
+    aiCategory: "PUBLIC_SAFETY",
+    aiPriority: "CRITICAL",
+    aiPriorityScore: 91,
+    aiSummary: "Model guessed this is critical.",
+    aiReasoning: "Because of the school route.",
+    aiConfidence: 78,
+  } as IssueWithRelations;
+
+  test("no ai field survives serialisation", () => {
+    const pub = toPublicIssue(withAi);
+    expect("ai" in pub).toBe(false);
+    expect(JSON.stringify(pub)).not.toContain("Model guessed");
+    expect(JSON.stringify(pub)).not.toContain("school route");
+  });
+
+  test("the published priority is the decision, not the suggestion", () => {
+    // The issue's own priority is HIGH; the model suggested CRITICAL. A citizen
+    // must see what the city decided, never what a model proposed.
+    expect(toPublicIssue(withAi).priority).toBe("HIGH");
+  });
 });

@@ -23,6 +23,8 @@ jobs:
       # Fails if a schema change was committed without its migration — the
       # single most common way a schema PR breaks the next deploy.
       - run: bunx drizzle-kit check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: bun test
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

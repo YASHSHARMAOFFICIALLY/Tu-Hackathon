@@ -18,6 +18,13 @@ export default async function FiledPage(props: PageProps<"/report/filed">) {
   const params = await props.searchParams;
   const number = Array.isArray(params.number) ? params.number[0] : params.number;
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  // Photos are uploaded after the report is filed, so some can fail while the
+  // report itself succeeded. Saying so here is the only honest place: the
+  // citizen is about to walk away believing the evidence is attached.
+  const stored = Number(Array.isArray(params.photos) ? params.photos[0] : params.photos);
+  const attempted = Number(Array.isArray(params.of) ? params.of[0] : params.of);
+  const photosFailed =
+    Number.isFinite(stored) && Number.isFinite(attempted) && stored < attempted;
 
   // Reached without a number means someone typed the URL. There is no receipt
   // to show, and inventing one would be worse than a 404.
@@ -38,6 +45,16 @@ export default async function FiledPage(props: PageProps<"/report/filed">) {
             Keep this reference number. It is all the tracker needs — no account,
             no email, no link to click.
           </p>
+
+          {photosFailed ? (
+            <p className="bg-status-progress-tint text-status-progress mt-6 rounded-xl px-4 py-3 text-left text-[0.875rem] leading-[1.55]">
+              {stored === 0
+                ? `None of your ${attempted} photos could be uploaded.`
+                : `${stored} of ${attempted} photos were uploaded.`}{" "}
+              The report is filed either way — open it from the register to try
+              the rest again.
+            </p>
+          ) : null}
 
           <p className="bg-surface text-ink mt-7 rounded-2xl py-6 font-mono text-[2.5rem] leading-none font-semibold tabular-nums select-all">
             #{number}

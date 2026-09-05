@@ -19,7 +19,7 @@ import type {
 import { NotFoundError, ValidationError } from "@/lib/http";
 import { requireRole, type CurrentUser } from "@/modules/auth/permissions";
 
-import { explainTransition } from "./workflow";
+import { explainAssignment, explainTransition } from "./workflow";
 
 /**
  * Officers act within their own department; admins act anywhere.
@@ -107,11 +107,32 @@ export async function assignIssue(
     throw new ValidationError("Provide assignedTo or departmentId");
   }
 
+  const departmentChanged =
+    input.departmentId !== undefined && input.departmentId !== issue.departmentId;
+  const departmentId =
+    input.departmentId === undefined ? issue.departmentId : input.departmentId;
+  const assignedTo =
+    input.assignedTo !== undefined
+      ? input.assignedTo
+      : departmentChanged
+        ? null
+        : issue.assignedTo;
+  const assignee = assignedTo
+    ? ((await db.query.profiles.findFirst({
+        where: { userId: assignedTo },
+        columns: { role: true, departmentId: true },
+      })) ?? null)
+    : undefined;
+  const refusal = explainAssignment(user, departmentId, assignee);
+  if (refusal) throw new ValidationError(refusal);
+
   return dbPool.transaction(async (tx) => {
     const [updated] = await tx
       .update(issues)
       .set({
-        ...(input.assignedTo !== undefined ? { assignedTo: input.assignedTo } : {}),
+        ...(input.assignedTo !== undefined || departmentChanged
+          ? { assignedTo }
+          : {}),
         ...(input.departmentId !== undefined
           ? { departmentId: input.departmentId }
           : {}),
@@ -122,14 +143,14 @@ export async function assignIssue(
 
     // Two distinct events, because "routed to Roads" and "given to an officer"
     // read differently on a public timeline.
-    if (input.departmentId !== undefined) {
+    if (departmentChanged) {
       await tx.insert(issueHistory).values({
         issueId,
         actorId: user.id,
         event: "DEPARTMENT_CHANGED",
       });
     }
-    if (input.assignedTo !== undefined) {
+    if (assignedTo !== issue.assignedTo) {
       await tx.insert(issueHistory).values({
         issueId,
         actorId: user.id,
@@ -198,6 +219,7 @@ export async function applyTriage(
     where: { id: issueId },
     columns: {
       id: true, status: true, priority: true, departmentId: true,
+      assignedTo: true,
       category: true, aiCategory: true, aiPriority: true, aiDepartmentId: true,
       aiConfidence: true,
     },
@@ -215,6 +237,15 @@ export async function applyTriage(
     overrides.departmentId !== undefined
       ? overrides.departmentId
       : (issue.aiDepartmentId ?? issue.departmentId);
+  const departmentChanged = departmentId !== issue.departmentId;
+  const assignee = issue.assignedTo && !departmentChanged
+    ? ((await db.query.profiles.findFirst({
+        where: { userId: issue.assignedTo },
+        columns: { role: true, departmentId: true },
+      })) ?? null)
+    : undefined;
+  const refusal = explainAssignment(user, departmentId, assignee);
+  if (refusal) throw new ValidationError(refusal);
 
   const accepted =
     !overrides.category && !overrides.priority && overrides.departmentId === undefined;
@@ -222,7 +253,14 @@ export async function applyTriage(
   return dbPool.transaction(async (tx) => {
     const [updated] = await tx
       .update(issues)
-      .set({ category, priority, departmentId, aiReviewedAt: new Date(), updatedAt: new Date() })
+      .set({
+        category,
+        priority,
+        departmentId,
+        ...(departmentChanged ? { assignedTo: null } : {}),
+        aiReviewedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(issues.id, issueId))
       .returning();
 

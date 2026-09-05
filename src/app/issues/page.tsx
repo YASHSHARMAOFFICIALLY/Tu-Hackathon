@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/app/page-shell";
 import { FilterBar } from "@/components/issues/filter-bar";
 import { IssueCards } from "@/components/issues/issue-cards";
+import { IssueMap } from "@/components/issues/issue-map";
 import { issueCategory, issueStatus } from "@/db/schema/enums";
 import { getCurrentUser } from "@/modules/auth/permissions";
 import { listDepartments } from "@/modules/departments/service";
@@ -81,6 +82,27 @@ export default async function IssuesPage(props: PageProps<"/issues">) {
           }}
           className="mt-6"
         />
+
+        {/* The map shows exactly what the filters selected — the same page of
+            results as the cards below it, not a different query. */}
+        {rows.some((issue) => issue.latitude !== null) ? (
+          <section className="border-line mt-5 rounded-2xl border bg-white p-5">
+            <h2 className="text-ink text-[1rem] font-bold tracking-[-0.01em]">
+              These reports on a map
+            </h2>
+            <IssueMap
+              points={rows.map((issue) => ({
+                id: issue.id,
+                number: issue.number,
+                title: issue.title,
+                category: issue.category,
+                latitude: issue.latitude,
+                longitude: issue.longitude,
+              }))}
+              height={320}
+            />
+          </section>
+        ) : null}
 
         <IssueCards
           issues={rows}

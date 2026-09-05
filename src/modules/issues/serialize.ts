@@ -98,7 +98,29 @@ export function toAuthorityIssue(issue: IssueWithRelations) {
     longitude: issue.longitude,
     reportedBy: issue.reporter ?? null,
     assignedTo: issue.assignee ?? null,
+    assignedToId: issue.assignedTo ?? null,
     departmentId: issue.departmentId,
+    /*
+     * AI suggestions, and ONLY on this side of the boundary.
+     *
+     * A model's guess at a priority is not a fact about the report, and putting
+     * it on the public shape would publish "this machine thinks your hazard is
+     * LOW" as though the city had decided it. An officer sees the suggestion,
+     * accepts or overrides it, and what the citizen sees is the decision.
+     *
+     * `aiReviewedAt` is the whole point of the distinction: it separates "a
+     * human has looked at this" from "a model guessed".
+     */
+    ai: {
+      category: issue.aiCategory ?? null,
+      priority: issue.aiPriority ?? null,
+      priorityScore: issue.aiPriorityScore ?? null,
+      departmentId: issue.aiDepartmentId ?? null,
+      summary: issue.aiSummary ?? null,
+      reasoning: issue.aiReasoning ?? null,
+      confidence: issue.aiConfidence ?? null,
+      reviewedAt: issue.aiReviewedAt ?? null,
+    },
     comments: issue.comments?.map((c) => ({
       id: c.id,
       body: c.body,

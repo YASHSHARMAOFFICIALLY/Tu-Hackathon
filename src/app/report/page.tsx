@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PageShell } from "@/components/app/page-shell";
 import { ReportForm } from "@/components/issues/report-form";
+import { uploadsEnabled } from "@/env";
 import { getCurrentUser } from "@/modules/auth/permissions";
 
 export const metadata = { title: "Report an issue" };
@@ -32,7 +33,9 @@ export default async function ReportPage() {
 
         {user ? (
           <div className="mt-6">
-            <ReportForm />
+            {/* The form hides its photo zone when the deployment has no blob
+                store: an upload control that always fails is worse than none. */}
+            <ReportForm uploadsEnabled={uploadsEnabled} />
           </div>
         ) : (
           <div className="border-line mt-6 rounded-2xl border bg-white p-6 md:p-8">

@@ -14,7 +14,7 @@
  * rehearsed demo matches the live one. Idempotent: everything it creates is
  * tagged and removed before re-seeding.
  */
-import { eq, inArray, like } from "drizzle-orm";
+import { inArray, like } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dbPool } from "@/db/pool";

@@ -66,6 +66,12 @@ export const listIssuesSchema = z.object({
   departmentId: z.uuid().optional(),
   /** "mine" is resolved against the session, never a client-supplied user id. */
   mine: z.coerce.boolean().optional(),
+  /**
+   * An officer's own queue. Like `mine`, this resolves against the session —
+   * the value is the literal string "me", never a user id, so the parameter
+   * cannot be used to enumerate what another officer is working on.
+   */
+  assigned: z.literal("me").optional(),
   // Capped: the backup demo dataset must not be able to request 10k rows.
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),

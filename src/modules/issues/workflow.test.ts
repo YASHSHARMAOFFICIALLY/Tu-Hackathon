@@ -10,6 +10,7 @@ import type { IssueStatus } from "@/db/schema/enums";
 import {
   allowedTransitions,
   canTransition,
+  explainAssignment,
   explainTransition,
   isTerminal,
   requiresNote,
@@ -109,5 +110,61 @@ describe("refusal messages", () => {
     expect(explainTransition("SUBMITTED", "SUBMITTED", undefined)).toMatch(
       /already/,
     );
+  });
+});
+
+describe("assignment scope", () => {
+  const roads = "roads";
+  const water = "water";
+  const officer = { role: "OFFICER" as const, departmentId: roads };
+
+  test("an officer can route an unassigned issue to their own department", () => {
+    expect(explainAssignment(officer, roads, undefined)).toBeNull();
+  });
+
+  test("an officer cannot route an issue to another department", () => {
+    expect(explainAssignment(officer, water, undefined)).toMatch(
+      /own department/,
+    );
+  });
+
+  test("an officer without a department cannot route an issue", () => {
+    expect(
+      explainAssignment(
+        { role: "OFFICER", departmentId: null },
+        null,
+        undefined,
+      ),
+    ).toMatch(/own department/);
+  });
+
+  test("a citizen cannot be assigned as the responsible officer", () => {
+    expect(
+      explainAssignment(
+        { role: "ADMIN", departmentId: null },
+        roads,
+        { role: "CITIZEN", departmentId: null },
+      ),
+    ).toMatch(/officer or administrator/);
+  });
+
+  test("an officer assignee must belong to the issue department", () => {
+    expect(
+      explainAssignment(
+        { role: "ADMIN", departmentId: null },
+        roads,
+        { role: "OFFICER", departmentId: water },
+      ),
+    ).toMatch(/same department/);
+  });
+
+  test("an administrator can be assigned across departments", () => {
+    expect(
+      explainAssignment(
+        { role: "ADMIN", departmentId: null },
+        roads,
+        { role: "ADMIN", departmentId: null },
+      ),
+    ).toBeNull();
   });
 });

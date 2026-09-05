@@ -5,7 +5,32 @@
  * asserted in a unit test. A workflow bug that only shows up with a seeded
  * database is a workflow bug that does not get tested.
  */
-import type { IssueStatus } from "@/db/schema/enums";
+import type { IssueStatus, UserRole } from "@/db/schema/enums";
+
+type AssignmentPerson = {
+  role: UserRole;
+  departmentId: string | null;
+};
+
+export function explainAssignment(
+  actor: AssignmentPerson,
+  departmentId: string | null,
+  assignee: AssignmentPerson | null | undefined,
+): string | null {
+  if (
+    actor.role === "OFFICER" &&
+    (actor.departmentId === null || departmentId !== actor.departmentId)
+  ) {
+    return "Officers may only route issues to their own department.";
+  }
+  if (assignee === null || assignee?.role === "CITIZEN") {
+    return "The assignee must be an officer or administrator.";
+  }
+  if (assignee?.role === "OFFICER" && assignee.departmentId !== departmentId) {
+    return "The assigned officer must belong to the same department as the issue.";
+  }
+  return null;
+}
 
 /**
  * Legal moves. The brief names the happy path — "Submitted, Acknowledged, In

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PinIcon } from "@/components/app/icons";
 import { CATEGORY } from "@/components/dashboard/pieces";
@@ -24,6 +24,12 @@ import { cn } from "@/lib/utils";
  *
  * Client-side validation mirrors `createIssueSchema` for the error message
  * only. The server parses the same input again; this is courtesy, not a check.
+ *
+ * Photos are uploaded AFTER the report is created, one request each, addressed
+ * by the new issue's id. Two consequences worth keeping: an abandoned duplicate
+ * check leaves no orphan blobs behind it, and a photo that fails to upload
+ * cannot take the report down with it — the citizen has already filed, and the
+ * receipt says which photos did not make it.
  */
 type Candidate = {
   id: string;
@@ -47,8 +53,37 @@ type Draft = {
 const FIELD =
   "border-field text-ink placeholder:text-placeholder w-full rounded-xl border bg-white px-3.5 py-3 text-[0.9375rem] focus-visible:ring-2 focus-visible:ring-brand focus-visible:border-brand focus-visible:outline-none";
 
-export function ReportForm() {
+/** Mirrors the server's rules so the message arrives before the round trip. */
+const ACCEPT = ["image/jpeg", "image/png", "image/webp"];
+const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_PHOTOS = 5;
+
+export function ReportForm({ uploadsEnabled }: { uploadsEnabled: boolean }) {
   const router = useRouter();
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [uploaded, setUploaded] = useState<number | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  function addPhotos(incoming: FileList | null) {
+    if (!incoming) return;
+    const files = Array.from(incoming);
+
+    const rejected = files.find(
+      (f) => !ACCEPT.includes(f.type) || f.size > MAX_BYTES,
+    );
+    if (rejected) {
+      setError(
+        !ACCEPT.includes(rejected.type)
+          ? `${rejected.name} is not a JPEG, PNG or WebP image.`
+          : `${rejected.name} is larger than 8MB.`,
+      );
+      return;
+    }
+
+    setError(null);
+    setPhotos((current) => [...current, ...files].slice(0, MAX_PHOTOS));
+  }
 
   const [draft, setDraft] = useState<Draft>({
     title: "",
@@ -135,7 +170,30 @@ export function ReportForm() {
         return;
       }
 
-      router.push(`/report/filed?number=${body.number}&id=${body.id}`);
+      // The report exists from here on. Photo failures are reported on the
+      // receipt, never as a failure to file.
+      let stored = 0;
+      if (photos.length > 0) {
+        setUploaded(0);
+        const results = await Promise.allSettled(
+          photos.map(async (photo) => {
+            const data = new FormData();
+            data.append("file", photo);
+            const uploadResponse = await fetch(
+              `/api/issues/${body.id}/attachments`,
+              { method: "POST", body: data },
+            );
+            if (!uploadResponse.ok) throw new Error("upload failed");
+            setUploaded((n) => (n ?? 0) + 1);
+          }),
+        );
+        stored = results.filter((r) => r.status === "fulfilled").length;
+      }
+
+      router.push(
+        `/report/filed?number=${body.number}&id=${body.id}` +
+          (photos.length > 0 ? `&photos=${stored}&of=${photos.length}` : ""),
+      );
     } catch {
       setError("No connection to the server. Check your network and try again.");
       setBusy(null);
@@ -210,7 +268,7 @@ export function ReportForm() {
           ))}
         </ul>
 
-        {error ? <Error>{error}</Error> : null}
+        {error ? <FormError>{error}</FormError> : null}
 
         <div className="mt-6 flex flex-wrap gap-3">
           <button
@@ -337,7 +395,83 @@ export function ReportForm() {
         </Field>
       </div>
 
-      {error ? <Error>{error}</Error> : null}
+      {uploadsEnabled ? (
+        <div className="mt-5">
+          <span className="text-ink block text-[0.875rem] font-medium">
+            Photos <span className="text-body font-normal">(optional)</span>
+          </span>
+          <span className="text-body mt-1 mb-2 block text-[0.8125rem] leading-[1.5]">
+            Up to {MAX_PHOTOS} images, 8MB each. A photograph is the fastest way
+            to prove a hazard is real.
+          </span>
+
+          {/* The whole zone is a label wrapping the input, so a click, a tap and
+              a keyboard Enter all open the picker without a click handler. */}
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              addPhotos(e.dataTransfer.files);
+            }}
+            className={cn(
+              "flex cursor-pointer flex-col items-center rounded-2xl border border-dashed px-5 py-8 text-center transition-colors focus-within:ring-2 focus-within:ring-brand",
+              dragging ? "border-brand bg-brand-tint" : "border-field bg-surface",
+            )}
+          >
+            <input
+              ref={fileInput}
+              type="file"
+              accept={ACCEPT.join(",")}
+              multiple
+              className="sr-only"
+              onChange={(e) => {
+                addPhotos(e.target.files);
+                // Clearing lets the same file be picked again after a removal.
+                e.target.value = "";
+              }}
+            />
+            <PinIcon className="text-brand size-6" />
+            <span className="text-ink mt-3 text-[0.9375rem] font-medium">
+              Drag photos here, or click to choose
+            </span>
+            <span className="text-body mt-1 text-[0.8125rem]">
+              JPEG, PNG or WebP
+            </span>
+          </label>
+
+          {photos.length > 0 ? (
+            <ul className="mt-3 flex flex-wrap gap-3">
+              {photos.map((photo, i) => (
+                <li
+                  key={`${photo.name}-${photo.lastModified}-${photo.size}-${i}`}
+                  className="relative"
+                >
+                  <PhotoPreview file={photo} />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPhotos((current) =>
+                        current.filter((_, index) => index !== i),
+                      )
+                    }
+                    className="bg-ink absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full text-white transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+                  >
+                    <span aria-hidden="true">×</span>
+                    <span className="sr-only">Remove {photo.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {error ? <FormError>{error}</FormError> : null}
 
       <div className="mt-7 flex flex-wrap items-center gap-3">
         <button
@@ -348,7 +482,9 @@ export function ReportForm() {
           {busy === "checking"
             ? "Checking for existing reports…"
             : busy === "filing"
-              ? "Filing…"
+              ? uploaded === null
+                ? "Filing…"
+                : `Uploading photos ${uploaded} / ${photos.length}…`
               : "Continue"}
         </button>
         <p className="text-body text-[0.8125rem]">
@@ -385,7 +521,7 @@ function Field({
   );
 }
 
-function Error({ children }: { children: React.ReactNode }) {
+function FormError({ children }: { children: React.ReactNode }) {
   return (
     <p
       role="alert"
@@ -393,5 +529,23 @@ function Error({ children }: { children: React.ReactNode }) {
     >
       {children}
     </p>
+  );
+}
+
+function PhotoPreview({ file }: { file: File }) {
+  const [src] = useState(() => URL.createObjectURL(file));
+
+  useEffect(() => () => URL.revokeObjectURL(src), [src]);
+
+  return (
+    <>
+      {/* Local object URL; Next Image optimisation adds no value before upload. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={file.name}
+        className="border-line size-24 rounded-xl border object-cover"
+      />
+    </>
   );
 }

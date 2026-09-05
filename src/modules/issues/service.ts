@@ -95,6 +95,7 @@ export async function listIssues(input: ListIssuesInput) {
   // "mine" resolves against the session. A client-supplied user id here would
   // let anyone enumerate another person's reports.
   if (input.mine && !user) return { issues: [], total: 0 };
+  if (input.assigned && !user) return { issues: [], total: 0 };
 
   // Drizzle v1's relational API takes an object filter, not raw SQL.
   //
@@ -117,6 +118,7 @@ export async function listIssues(input: ListIssuesInput) {
     ...(input.priority ? { priority: input.priority } : {}),
     ...(input.departmentId ? { departmentId: input.departmentId } : {}),
     ...(input.mine && user ? { reportedBy: user.id } : {}),
+    ...(input.assigned && user ? { assignedTo: user.id } : {}),
   };
 
   // The same filter expressed as SQL for the count. Kept next to the object
@@ -136,6 +138,7 @@ export async function listIssues(input: ListIssuesInput) {
   if (input.departmentId)
     conditions.push(eq(issues.departmentId, input.departmentId));
   if (input.mine && user) conditions.push(eq(issues.reportedBy, user.id));
+  if (input.assigned && user) conditions.push(eq(issues.assignedTo, user.id));
 
   const [rows, total] = await Promise.all([
     db.query.issues.findMany({

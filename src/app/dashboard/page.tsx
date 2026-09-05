@@ -9,6 +9,7 @@ import {
   ReportIcon,
 } from "@/components/app/icons";
 import { AppShell, type NavItem } from "@/components/app/shell";
+import { IssueMap } from "@/components/issues/issue-map";
 import {
   Categories,
   Departments,
@@ -134,9 +135,16 @@ function greeting() {
 
 async function Authority({ departmentId }: { departmentId?: string }) {
   // Every read is independent, so they overlap rather than queue.
-  const [summary, recent, departments] = await Promise.all([
+  const [summary, recent, mapped, queue, departments] = await Promise.all([
     getDashboard({ departmentId }),
     listIssues({ limit: 6, offset: 0, ...(departmentId ? { departmentId } : {}) }),
+    // The map's own read: the newest 100, which is the schema's cap and an
+    // honest scope to state under the map. Reusing `listIssues` rather than
+    // adding a coordinates query keeps the privacy rounding on one path.
+    listIssues({ limit: 100, offset: 0, ...(departmentId ? { departmentId } : {}) }),
+    // The signed-in officer's own queue. Resolved against the session inside
+    // the service — "me" is the only value the schema accepts.
+    listIssues({ assigned: "me", limit: 5, offset: 0 }),
     listDepartments(),
   ]);
 
@@ -257,6 +265,42 @@ async function Authority({ departmentId }: { departmentId?: string }) {
           <Departments data={summary.byDepartment} />
         </Panel>
       </div>
+
+      {queue.total > 0 ? (
+        <Panel
+          title="Assigned to you"
+          action={{ href: "/issues", label: "The register" }}
+          className="mt-5"
+        >
+          <IssueList
+            issues={queue.issues.map(toPublicIssue)}
+            empty="Nothing is assigned to you."
+          />
+          {queue.total > queue.issues.length ? (
+            <p className="text-body mt-3 text-[0.8125rem]">
+              Showing {queue.issues.length} of{" "}
+              <span className="text-ink font-mono tabular-nums">
+                {queue.total}
+              </span>{" "}
+              reports assigned to you.
+            </p>
+          ) : null}
+        </Panel>
+      ) : null}
+
+      <Panel title="Where reports cluster" className="mt-5">
+        <IssueMap
+          points={mapped.issues.map(toPublicIssue).map((issue) => ({
+            id: issue.id,
+            number: issue.number,
+            title: issue.title,
+            category: issue.category,
+            latitude: issue.latitude,
+            longitude: issue.longitude,
+          }))}
+          height={420}
+        />
+      </Panel>
 
       <Panel
         title="Latest reports"

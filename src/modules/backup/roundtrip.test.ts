@@ -15,7 +15,7 @@
  * before judging.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dbPool } from "@/db/pool";

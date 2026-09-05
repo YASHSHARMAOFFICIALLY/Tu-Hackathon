@@ -4,10 +4,17 @@ import { notFound } from "next/navigation";
 import { PinIcon } from "@/components/app/icons";
 import { PageShell } from "@/components/app/page-shell";
 import { CATEGORY, StatusChip } from "@/components/dashboard/pieces";
+import { AttachPhotos } from "@/components/issues/attach-photos";
+import { IssueMap } from "@/components/issues/issue-map";
+import { OfficerPanel } from "@/components/issues/officer-panel";
 import { Timeline } from "@/components/issues/timeline";
 import type { IssueCategory } from "@/db/schema/enums";
 import { NotFoundError } from "@/lib/http";
 import { getCurrentUser } from "@/modules/auth/permissions";
+import { listOfficers } from "@/modules/auth/officers";
+import { listDepartments } from "@/modules/departments/service";
+import { canAttach } from "@/modules/issues/attachments";
+import { allowedTransitions } from "@/modules/issues/workflow";
 import { getIssue, listIssues } from "@/modules/issues/service";
 import { toAuthorityIssue, toPublicIssue } from "@/modules/issues/serialize";
 
@@ -39,7 +46,11 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
   if (!issue) notFound();
 
   const isAuthority = user?.role === "OFFICER" || user?.role === "ADMIN";
-  const view = isAuthority ? toAuthorityIssue(issue) : toPublicIssue(issue);
+  // Kept as its own binding rather than narrowing a union at each use: the
+  // authority shape is a superset, and `authority` being non-null IS the
+  // permission check as far as this page is concerned.
+  const authority = isAuthority ? toAuthorityIssue(issue) : null;
+  const view = authority ?? toPublicIssue(issue);
   const meta = CATEGORY[view.category as IssueCategory];
 
   // Other open reports in the same category, which is what "similar" can mean
@@ -53,6 +64,16 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
 
   const photos =
     view.attachments?.filter((a) => a.fileType?.startsWith("image/")) ?? [];
+
+  // Asked of the session, not of the rendered view: the control appears only
+  // for someone the upload route would actually accept.
+  const mayAttach = await canAttach({ reportedBy: issue.reportedBy });
+
+  // Only fetched for an officer: the staff list is not something a citizen's
+  // page should be querying, even if it were never rendered.
+  const [departments, officers] = isAuthority
+    ? await Promise.all([listDepartments(), listOfficers()])
+    : [[], []];
 
   return (
     <PageShell title={`Report #${view.number}`}>
@@ -99,9 +120,18 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="flex flex-col gap-5">
-            {photos.length > 0 ? (
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {photos.map((photo) => (
+            {photos.length > 0 || mayAttach ? (
+              <section className="border-line rounded-2xl border bg-white p-6">
+                <h2 className="text-ink text-[1rem] font-bold tracking-[-0.01em]">
+                  Evidence
+                </h2>
+                {photos.length === 0 ? (
+                  <p className="text-body mt-2 text-[0.875rem] leading-[1.6]">
+                    No photographs are attached to this report yet.
+                  </p>
+                ) : null}
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {photos.map((photo) => (
                   <li key={photo.id}>
                     {/* Reporter-supplied URL: served as-is rather than through
                         the image optimiser, which would fetch arbitrary hosts
@@ -114,8 +144,42 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                       className="border-line h-52 w-full rounded-2xl border object-cover"
                     />
                   </li>
-                ))}
-              </ul>
+                  ))}
+                </ul>
+                {mayAttach ? (
+                  <AttachPhotos issueId={view.id} remaining={5 - photos.length} />
+                ) : null}
+              </section>
+            ) : null}
+
+            {authority ? (
+              <OfficerPanel
+                key={[
+                  authority.status,
+                  authority.category,
+                  authority.priority,
+                  authority.departmentId,
+                  authority.assignedToId,
+                  authority.ai.reviewedAt,
+                ].join(":")}
+                issueId={authority.id}
+                status={authority.status}
+                category={authority.category}
+                priority={authority.priority}
+                departmentId={authority.departmentId ?? null}
+                assignedToId={authority.assignedToId}
+                // The legal moves come from the state machine on the server, so
+                // the buttons can never offer a transition the service refuses.
+                allowed={allowedTransitions(authority.status)}
+                departments={departments}
+                officers={officers}
+                ai={{
+                  ...authority.ai,
+                  reviewedAt: authority.ai.reviewedAt
+                    ? new Date(authority.ai.reviewedAt).toISOString()
+                    : null,
+                }}
+              />
             ) : null}
 
             <section className="border-line rounded-2xl border bg-white p-6">
@@ -156,7 +220,7 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                 <ul className="divide-line mt-3 divide-y">
                   {view.comments.map((comment) => (
                     <li key={comment.id} className="py-3.5">
-                      <p className="text-body text-[0.8125rem]">
+                      <p className="text-body flex flex-wrap items-center gap-2 text-[0.8125rem]">
                         <span className="text-ink font-medium">
                           {comment.author?.name ?? "Municipal office"}
                         </span>{" "}
@@ -166,6 +230,13 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                         >
                           {new Date(comment.createdAt).toLocaleDateString()}
                         </time>
+                        {/* Only ever true on the authority shape: the public
+                            serialiser filters internal notes out entirely. */}
+                        {"isInternal" in comment && comment.isInternal ? (
+                          <span className="bg-tint-lilac text-ink rounded-full px-2 py-0.5 text-[0.6875rem] font-medium">
+                            Internal — not shown to the citizen
+                          </span>
+                        ) : null}
                       </p>
                       <p className="text-ink mt-1.5 text-[0.9375rem] leading-[1.6]">
                         {comment.body}
@@ -209,6 +280,27 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                 ) : null}
               </dl>
             </section>
+
+            {view.latitude !== null && view.longitude !== null ? (
+              <section className="border-line rounded-2xl border bg-white p-6">
+                <h2 className="text-ink text-[1rem] font-bold tracking-[-0.01em]">
+                  Roughly here
+                </h2>
+                <IssueMap
+                  points={[
+                    {
+                      id: view.id,
+                      number: view.number,
+                      title: view.title,
+                      category: view.category,
+                      latitude: view.latitude,
+                      longitude: view.longitude,
+                    },
+                  ]}
+                  height={220}
+                />
+              </section>
+            ) : null}
 
             {nearby.length > 0 ? (
               <section className="border-line rounded-2xl border bg-white p-6">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { signIn } from "@/auth/client";
+import { signIn } from "@/modules/auth/client";
 
 /**
  * Starts the Google OAuth flow.
@@ -21,6 +21,7 @@ export function GoogleSignInButton({ callbackURL = "/" }: { callbackURL?: string
     <button
       type="button"
       disabled={pending}
+      className="min-h-11 w-full rounded-md border border-current/15 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-current/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 disabled:opacity-60"
       onClick={async () => {
         setPending(true);
         await signIn.social({ provider: "google", callbackURL });

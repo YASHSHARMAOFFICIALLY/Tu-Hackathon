@@ -11,7 +11,9 @@
     "db:migrate": "bun run src/db/migrate.ts",
     "db:studio": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs studio",
     "db:check": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs check",
-    "test": "bun --env-file=.env.local test"
+    "test": "bun --env-file=.env.local test",
+    "db:admin": "bun run src/modules/auth/seed-admin.ts",
+    "db:seed:departments": "bun run src/modules/departments/seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

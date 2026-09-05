@@ -8,6 +8,6 @@
  */
 import { toNextJsHandler } from "better-auth/next-js";
 
-import { auth } from "@/auth";
+import { auth } from "@/modules/auth";
 
 export const { GET, POST } = toNextJsHandler(auth);

@@ -1,4 +1,5 @@
 import type { IssueEvent, IssueStatus } from "@/db/schema/enums";
+import { formatDate, formatDateTime } from "@/lib/date";
 
 /**
  * The progress timeline: the four stages the brief names, plus whatever else
@@ -129,11 +130,7 @@ export function Timeline({
                       dateTime={at.toISOString()}
                       className="text-body font-mono text-[0.75rem] tabular-nums"
                     >
-                      {at.toLocaleDateString()}{" "}
-                      {at.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTime(at)}
                     </time>
                   ) : (
                     <span className="text-placeholder text-[0.75rem]">
@@ -162,7 +159,7 @@ export function Timeline({
                   dateTime={new Date(entry.createdAt).toISOString()}
                   className="font-mono text-[0.75rem] tabular-nums"
                 >
-                  {new Date(entry.createdAt).toLocaleDateString()}
+                  {formatDate(entry.createdAt)}
                 </time>
               </p>
               {entry.note ? (

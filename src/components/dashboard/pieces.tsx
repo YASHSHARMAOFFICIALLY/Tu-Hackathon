@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { IssueCategory, IssueStatus } from "@/db/schema/enums";
+import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 /**
@@ -684,7 +685,7 @@ export function IssueList({
                   dateTime={new Date(issue.createdAt).toISOString()}
                   className="text-body font-mono text-[0.75rem]"
                 >
-                  {new Date(issue.createdAt).toLocaleDateString()}
+                  {formatDate(issue.createdAt)}
                 </time>
               </span>
             </Link>

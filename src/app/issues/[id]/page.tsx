@@ -10,6 +10,7 @@ import { IssueMap } from "@/components/issues/issue-map";
 import { OfficerPanel } from "@/components/issues/officer-panel";
 import { Timeline } from "@/components/issues/timeline";
 import type { IssueCategory } from "@/db/schema/enums";
+import { formatDate } from "@/lib/date";
 import { NotFoundError } from "@/lib/http";
 import { getCurrentUser } from "@/modules/auth/permissions";
 import { listOfficers } from "@/modules/auth/officers";
@@ -232,7 +233,7 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                         <time
                           dateTime={new Date(comment.createdAt).toISOString()}
                         >
-                          {new Date(comment.createdAt).toLocaleDateString()}
+                          {formatDate(comment.createdAt)}
                         </time>
                         {/* Only ever true on the authority shape: the public
                             serialiser filters internal notes out entirely. */}
@@ -284,13 +285,13 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                 <Row label="Priority" value={title(view.priority)} />
                 <Row
                   label="Reported"
-                  value={new Date(view.createdAt).toLocaleDateString()}
+                  value={formatDate(view.createdAt)}
                 />
                 <Row
                   label="Resolved"
                   value={
                     view.resolvedAt
-                      ? new Date(view.resolvedAt).toLocaleDateString()
+                      ? formatDate(view.resolvedAt)
                       : "Not yet"
                   }
                 />

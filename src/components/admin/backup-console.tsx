@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 
+import { formatDateTime } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 /**
@@ -303,7 +304,7 @@ export function BackupConsole({
                     <span aria-hidden="true">·</span>
                     <span>taken</span>
                     <span className="text-ink font-mono">
-                      {new Date(preview.createdAt).toLocaleString()}
+                      {formatDateTime(preview.createdAt)}
                     </span>
                   </p>
                   <CountsTable counts={preview.counts} total={preview.total} />

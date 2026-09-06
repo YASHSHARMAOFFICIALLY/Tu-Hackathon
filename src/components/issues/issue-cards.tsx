@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PinIcon } from "@/components/app/icons";
 import { CATEGORY, StatusChip } from "@/components/dashboard/pieces";
 import type { IssueCategory, IssueStatus } from "@/db/schema/enums";
+import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 /**
@@ -122,7 +123,7 @@ export function IssueCards({
                 <p className="text-body mt-3 flex items-center justify-between font-mono text-[0.75rem] tabular-nums">
                   <span>#{issue.number}</span>
                   <time dateTime={new Date(issue.createdAt).toISOString()}>
-                    {new Date(issue.createdAt).toLocaleDateString()}
+                    {formatDate(issue.createdAt)}
                   </time>
                 </p>
               </div>

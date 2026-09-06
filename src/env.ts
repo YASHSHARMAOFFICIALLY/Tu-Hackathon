@@ -48,9 +48,13 @@ export const env = {
    * been retired by the time a key was configured, which is exactly how that
    * failure looks — a 404 naming the model, not an auth error.
    *
-   * `ListModels` with the project's key is how to find the current ids.
+   * `ListModels` with the project's key is how to find the current ids, and it
+   * is also the only way to see which of them this key may actually call:
+   * `gemini-2.5-flash` answers 429 against a free-tier limit of 20 and
+   * `gemini-2.5-flash-lite` answers 404, while `gemini-3.5-flash` serves
+   * normally on the same key.
    */
-  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-3.5-flash",
   GEMINI_EMBEDDING_MODEL:
     process.env.GEMINI_EMBEDDING_MODEL ?? "gemini-embedding-001",
 

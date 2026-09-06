@@ -21,8 +21,8 @@ export default function Page() {
       <main>
         <Hero />
         <BentoCard />
-        <TwoSides />
         <Walkthrough />
+        <TwoSides />
         <Register />
         <Faq />
       </main>

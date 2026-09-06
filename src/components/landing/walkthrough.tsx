@@ -19,9 +19,13 @@
  *   3. `width`/`height` on the element. They fix the aspect box before the
  *      video loads, so the section does not jump when it does.
  *
- * The section sits on the page's own white, like every other one but the ink
- * panel above it. The frame around the video is a hairline and a soft shadow —
+ * The section sits on the page's own white, and runs directly into the ink
+ * panel below it. The frame around the video is a hairline and a soft shadow —
  * enough to seat a bright rectangle on the page, not a fake browser chrome.
+ *
+ * One centred line above it and nothing else: the recording is the argument,
+ * and a paragraph explaining a video someone is about to watch is a paragraph
+ * they read instead of watching.
  */
 
 /** Read off the recording, in the order the walkthrough visits them. */
@@ -36,19 +40,9 @@ export function Walkthrough() {
   return (
     <section id="walkthrough" className="scroll-mt-32 py-20 md:py-24">
       <div className="mx-auto max-w-6xl px-5 md:px-8">
-        <div className="max-w-2xl">
-          <h2 className="text-ink text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.1] font-bold tracking-[-0.03em] text-balance">
-            The whole thing, running
-          </h2>
-          <p className="text-body mt-4 max-w-[56ch] text-[1.0625rem] leading-[1.6] text-pretty">
-            One take, no edits: a citizen files a report, an officer works it,
-            and the register is backed up and put back. Recorded on the
-            deployment this page is served from.
-          </p>
-          <p className="text-body mt-4 font-mono text-[0.75rem] tracking-[0.06em] uppercase">
-            7 min 35 s · with sound
-          </p>
-        </div>
+        <h2 className="text-ink mx-auto max-w-[18ch] text-center text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.1] font-bold tracking-[-0.03em] text-balance">
+          The whole thing, running
+        </h2>
 
         <figure className="mt-10">
           <video

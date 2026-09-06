@@ -39,10 +39,20 @@ export const env = {
    * reason a citizen cannot file a report.
    */
   GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? "",
-  /** Model ids in env so a newer model is a config change, not a code change. */
-  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+  /**
+   * Model ids in env so a newer model is a config change, not a code change.
+   *
+   * Both defaults are pinned to an exact stable id rather than an alias like
+   * `gemini-flash-latest`: an alias can move under a live demo, and the two
+   * previous defaults (`gemini-2.0-flash`, `text-embedding-004`) had already
+   * been retired by the time a key was configured, which is exactly how that
+   * failure looks — a 404 naming the model, not an auth error.
+   *
+   * `ListModels` with the project's key is how to find the current ids.
+   */
+  GEMINI_MODEL: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
   GEMINI_EMBEDDING_MODEL:
-    process.env.GEMINI_EMBEDDING_MODEL ?? "text-embedding-004",
+    process.env.GEMINI_EMBEDDING_MODEL ?? "gemini-embedding-001",
 
   /**
    * Vercel Blob read-write token, injected by Vercel once the store is linked

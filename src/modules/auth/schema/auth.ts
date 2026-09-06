@@ -21,6 +21,7 @@ import {
   boolean,
   integer,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -59,6 +60,15 @@ export const account = pgTable(
   "account",
   {
     id: text("id").primaryKey(),
+    /**
+     * Added by hand, not by the CLI. Better Auth 1.7 made `issuer` a required
+     * field on `account` and keys the provider-account uniqueness on it; without
+     * the column every sign-up fails with "The field \"issuer\" does not exist
+     * in the \"account\" Drizzle schema". For the providers here it holds the
+     * same value as `providerId`, which is what the backfill in the migration
+     * relies on.
+     */
+    issuer: text("issuer").notNull(),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
     userId: text("user_id")
@@ -76,7 +86,10 @@ export const account = pgTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index("account_userId_idx").on(table.userId)],
+  (table) => [
+    index("account_userId_idx").on(table.userId),
+    uniqueIndex("account_issuer_accountId_idx").on(table.issuer, table.accountId),
+  ],
 );
 
 export const verification = pgTable(

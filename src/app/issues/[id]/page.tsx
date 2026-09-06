@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PinIcon } from "@/components/app/icons";
 import { PageShell } from "@/components/app/page-shell";
 import { CATEGORY, StatusChip } from "@/components/dashboard/pieces";
+import { AddComment } from "@/components/issues/add-comment";
 import { AttachPhotos } from "@/components/issues/attach-photos";
 import { IssueMap } from "@/components/issues/issue-map";
 import { OfficerPanel } from "@/components/issues/officer-panel";
@@ -212,11 +213,14 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
               />
             </section>
 
-            {view.comments && view.comments.length > 0 ? (
-              <section className="border-line rounded-2xl border bg-white p-6">
-                <h2 className="text-ink text-[1rem] font-bold tracking-[-0.01em]">
-                  Updates
-                </h2>
+            {/* Always rendered now: the section is where a resident replies, so
+                it has to exist before there is anything in it. */}
+            <section className="border-line rounded-2xl border bg-white p-6">
+              <h2 className="text-ink text-[1rem] font-bold tracking-[-0.01em]">
+                Updates
+              </h2>
+
+              {view.comments && view.comments.length > 0 ? (
                 <ul className="divide-line mt-3 divide-y">
                   {view.comments.map((comment) => (
                     <li key={comment.id} className="py-3.5">
@@ -244,8 +248,30 @@ export default async function IssuePage(props: PageProps<"/issues/[id]">) {
                     </li>
                   ))}
                 </ul>
-              </section>
-            ) : null}
+              ) : (
+                <p className="text-body mt-3 text-[0.9375rem] leading-[1.6]">
+                  Nothing has been added yet. Progress from the department
+                  appears here, and so does anything you write.
+                </p>
+              )}
+
+              {/* Officers post from the officer panel, which can also file an
+                  internal note. Two boxes posting to one endpoint is a question
+                  the reader should not have to answer. */}
+              {user && !isAuthority ? (
+                <AddComment issueId={view.id} />
+              ) : !user ? (
+                <p className="border-line text-body mt-5 border-t pt-5 text-[0.875rem] leading-[1.6]">
+                  <Link
+                    href={`/sign-in?redirectTo=/issues/${view.id}`}
+                    className="text-brand underline decoration-current/30 underline-offset-4 transition-colors hover:decoration-current focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+                  >
+                    Sign in
+                  </Link>{" "}
+                  to add an update to this report.
+                </p>
+              ) : null}
+            </section>
           </div>
 
           <div className="flex flex-col gap-5">

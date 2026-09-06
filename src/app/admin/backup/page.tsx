@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BackupConsole } from "@/components/admin/backup-console";
+import { PageShell } from "@/components/app/page-shell";
 import { getCurrentUser } from "@/modules/auth/permissions";
 
 export const metadata = { title: "Backup and restore" };
@@ -14,9 +15,10 @@ export const metadata = { title: "Backup and restore" };
  * `src/middleware.ts` for why the two are not the same thing) and the three
  * APIs enforce it a third time, which is the one that actually counts.
  *
- * The dark header is the same `--ink` plate the site footer uses. An operations
- * console needs a different frame from the public pages, and reusing a ground
- * the design system already has beats inventing an admin theme.
+ * It lives inside the ordinary application shell. The bespoke dark header this
+ * page used to carry was a second navigation for two screens, and it cost the
+ * rail, the search box and the way back to the register on the one screen where
+ * an operator most wants to check something before overwriting a database.
  */
 export default async function BackupPage() {
   const user = await getCurrentUser();
@@ -53,70 +55,19 @@ export default async function BackupPage() {
   }
 
   return (
-    <div className="flex min-h-[100svh] flex-col">
-      <header className="bg-ink">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:px-8">
-          <Link
-            href="/"
-            className="text-canvas inline-flex items-center gap-2 rounded-lg text-[0.9375rem] font-semibold tracking-[-0.01em] focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            <Shield />
-            CivicTrack
-          </Link>
-          <span aria-hidden="true" className="text-ink-muted">
-            /
-          </span>
-          <Link
-            href="/admin/people"
-            className="text-ink-muted hover:text-canvas rounded-lg text-[0.9375rem] transition-colors focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            People
-          </Link>
-          <Link
-            href="/admin/backup"
-            aria-current="page"
-            className="text-canvas rounded-lg text-[0.9375rem] focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            Backup
-          </Link>
-
-          <p className="text-ink-muted ml-auto hidden text-[0.8125rem] sm:block">
-            {name} · <span className="font-mono">{user.role}</span>
-          </p>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 md:px-8 md:py-16">
-        <h1 className="text-ink text-[clamp(1.75rem,3.2vw,2.5rem)] leading-[1.05] font-bold tracking-[-0.03em]">
+    <PageShell title="Backup and restore">
+      <div className="mx-auto w-full max-w-5xl">
+        <h1 className="text-ink text-[clamp(1.5rem,2.4vw,2rem)] leading-[1.1] font-bold tracking-[-0.03em]">
           Backup and restore
         </h1>
-        <p className="text-body mt-4 max-w-[64ch] text-[1.0625rem] leading-[1.6] text-pretty">
+        <p className="text-body mt-2 max-w-[64ch] text-[0.9375rem] leading-[1.55] text-pretty">
           Take a copy of the register, check a copy before you trust it, and put
           one back. A restore runs in a single transaction: if any row fails,
           nothing is written and the register is exactly as it was.
         </p>
 
         <BackupConsole />
-      </main>
-    </div>
-  );
-}
-
-/** The navbar mark, reduced to the shield: at 20px the leaf inside it is mud. */
-function Shield() {
-  return (
-    <svg viewBox="0 0 32 32" className="size-5 shrink-0" aria-hidden="true" fill="none">
-      <path
-        d="M16 2.5 28 7v10.2C28 24 22.8 28.6 16 30.5 9.2 28.6 4 24 4 17.2V7l12-4.5Z"
-        fill="var(--color-brand-bright)"
-      />
-      <path
-        d="m11 16 3.4 3.4L21 12.8"
-        stroke="var(--color-ink)"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      </div>
+    </PageShell>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PageShell } from "@/components/app/page-shell";
 import { PeopleConsole } from "@/components/admin/people-console";
 import { getCurrentUser } from "@/modules/auth/permissions";
 import { listPeople } from "@/modules/auth/roles";
@@ -15,9 +16,13 @@ export const metadata = { title: "People and roles" };
  * `bun run db:admin` could create an administrator and nothing could create an
  * officer, so the whole triage workflow existed only behind hand-written SQL.
  *
- * Same frame as the backup console: server-gated on ADMIN here, enforced again
- * in `listPeople`/`setPersonRole`, and the dark `--ink` header that marks an
- * operations screen apart from the public pages.
+ * Server-gated on ADMIN here and enforced again in `listPeople`/`setPersonRole`.
+ *
+ * It lives inside the ordinary application shell rather than behind a bespoke
+ * admin header. The separate header was a second navigation for two pages: it
+ * cost the rail, the search box and the way back to the register, and it made
+ * administration feel like a different product. Administration is part of this
+ * one, so it gets the same frame as everything else.
  */
 export default async function PeoplePage() {
   const user = await getCurrentUser();
@@ -60,44 +65,12 @@ export default async function PeoplePage() {
   ]);
 
   return (
-    <div className="flex min-h-[100svh] flex-col">
-      <header className="bg-ink">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-5 md:px-8">
-          <Link
-            href="/"
-            className="text-canvas inline-flex items-center gap-2 rounded-lg text-[0.9375rem] font-semibold tracking-[-0.01em] focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            <Shield />
-            CivicTrack
-          </Link>
-          <span aria-hidden="true" className="text-ink-muted">
-            /
-          </span>
-          <Link
-            href="/admin/people"
-            aria-current="page"
-            className="text-canvas rounded-lg text-[0.9375rem] focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            People
-          </Link>
-          <Link
-            href="/admin/backup"
-            className="text-ink-muted hover:text-canvas rounded-lg text-[0.9375rem] transition-colors focus-visible:ring-2 focus-visible:ring-canvas focus-visible:ring-offset-2 focus-visible:ring-offset-ink focus-visible:outline-none"
-          >
-            Backup
-          </Link>
-
-          <p className="text-ink-muted ml-auto hidden text-[0.8125rem] sm:block">
-            {name} · <span className="font-mono">{user.role}</span>
-          </p>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 md:px-8 md:py-16">
-        <h1 className="text-ink text-[clamp(1.75rem,3.2vw,2.5rem)] leading-[1.05] font-bold tracking-[-0.03em]">
+    <PageShell title="People and roles">
+      <div className="mx-auto w-full max-w-5xl">
+        <h1 className="text-ink text-[clamp(1.5rem,2.4vw,2rem)] leading-[1.1] font-bold tracking-[-0.03em]">
           People and roles
         </h1>
-        <p className="text-body mt-4 max-w-[64ch] text-[1.0625rem] leading-[1.6] text-pretty">
+        <p className="text-body mt-2 max-w-[64ch] text-[0.9375rem] leading-[1.55] text-pretty">
           Everyone who has signed in, and what they are allowed to do. Promoting
           a resident to officer is how the queue gets worked: an officer sees
           their department&apos;s issues and every issue nobody has triaged yet.
@@ -108,26 +81,8 @@ export default async function PeoplePage() {
           departments={departments}
           currentUserId={user.id}
         />
-      </main>
-    </div>
+      </div>
+    </PageShell>
   );
 }
 
-/** The navbar mark, reduced to the shield: at 20px the leaf inside it is mud. */
-function Shield() {
-  return (
-    <svg viewBox="0 0 32 32" className="size-5 shrink-0" aria-hidden="true" fill="none">
-      <path
-        d="M16 2.5 28 7v10.2C28 24 22.8 28.6 16 30.5 9.2 28.6 4 24 4 17.2V7l12-4.5Z"
-        fill="var(--color-brand-bright)"
-      />
-      <path
-        d="m11 16 3.4 3.4L21 12.8"
-        stroke="var(--color-ink)"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}

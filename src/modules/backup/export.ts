@@ -7,7 +7,7 @@
  * keeps the pooled connection free.
  */
 import { createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -20,6 +20,8 @@ import {
   profiles,
   user,
 } from "@/db/schema";
+
+import { requireAdmin } from "@/modules/auth/permissions";
 
 import { FORMAT_NAME, FORMAT_VERSION, type Backup } from "./format";
 
@@ -118,4 +120,42 @@ export async function exportBackup(
 /** Filename a judge will see in their downloads folder. */
 export function backupFilename(date = new Date()): string {
   return `issue-tracker-backup-${date.toISOString().slice(0, 10)}.json`;
+}
+
+/**
+ * How many rows an export would carry, per table.
+ *
+ * Read by the console so the export card states what is actually in the
+ * register rather than listing table names. It is the same seven tables
+ * `exportBackup` writes, counted the cheap way: an operator about to take a
+ * copy wants the size of the thing, and an operator about to overwrite a
+ * database wants to compare it against the file's own counts, which the
+ * preview already reports in the same shape.
+ */
+export type ExportCounts = {
+  departments: number;
+  users: number;
+  issues: number;
+  issueHistory: number;
+  comments: number;
+  attachments: number;
+  issueDuplicates: number;
+};
+
+export async function exportCounts(): Promise<ExportCounts> {
+  await requireAdmin();
+
+  const [row] = await db
+    .select({
+      departments: sql<number>`(select count(*) from ${departments})::int`,
+      users: sql<number>`(select count(*) from ${user})::int`,
+      issues: sql<number>`(select count(*) from ${issues})::int`,
+      issueHistory: sql<number>`(select count(*) from ${issueHistory})::int`,
+      comments: sql<number>`(select count(*) from ${comments})::int`,
+      attachments: sql<number>`(select count(*) from ${attachments})::int`,
+      issueDuplicates: sql<number>`(select count(*) from ${issueDuplicates})::int`,
+    })
+    .from(sql`(select 1) as one`);
+
+  return row;
 }

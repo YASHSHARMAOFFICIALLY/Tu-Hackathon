@@ -147,9 +147,9 @@ export function PeopleConsole({
       {/* Counts, from the list itself. Nothing here is a number the page went
           looking for, so nothing here can be a number the page invented. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <Stat value={counts.ADMIN} label="administrators" />
-        <Stat value={counts.OFFICER} label="officers" />
-        <Stat value={counts.CITIZEN} label="residents" />
+        <Stat value={counts.ADMIN} label="administrator" plural="administrators" />
+        <Stat value={counts.OFFICER} label="officer" plural="officers" />
+        <Stat value={counts.CITIZEN} label="resident" plural="residents" />
         <Stat
           value={`${counts.covered}/${departments.length}`}
           label="departments staffed"
@@ -225,13 +225,23 @@ export function PeopleConsole({
   );
 }
 
-function Stat({ value, label }: { value: number | string; label: string }) {
+function Stat({
+  value,
+  label,
+  plural,
+}: {
+  value: number | string;
+  label: string;
+  /** Omitted when the label does not inflect ("departments staffed" counts a
+   *  ratio, not a thing, so it reads the same at every value). */
+  plural?: string;
+}) {
   return (
     <p className="text-body text-[0.8125rem]">
       <span className="text-ink font-mono text-[1.125rem] font-medium tabular-nums">
         {value}
       </span>{" "}
-      {label}
+      {plural && value !== 1 ? plural : label}
     </p>
   );
 }

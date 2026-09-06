@@ -79,7 +79,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function BackupConsole() {
+export function BackupConsole({
+  /** Row counts of the live register, so the export card states what is in the
+   *  database rather than listing table names. Read on the server by the page. */
+  liveCounts,
+}: {
+  liveCounts: Counts;
+}) {
   const [redactEmails, setRedactEmails] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -210,11 +216,11 @@ export function BackupConsole() {
   }
 
   return (
-    <div className="mt-10 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="mt-8 grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_19rem]">
       {/* ── Restore: the main column, three steps ───────────────── */}
       <section
         aria-labelledby="restore-heading"
-        className="border-line order-2 rounded-2xl border bg-white lg:order-1"
+        className="border-line order-2 rounded-2xl border bg-white md:order-1"
       >
         <div className="border-line border-b px-6 py-5 sm:px-8">
           <h2
@@ -409,7 +415,7 @@ export function BackupConsole() {
       {/* ── Export: one action, so it sits beside, not above ────── */}
       <section
         aria-labelledby="export-heading"
-        className="border-line order-1 rounded-2xl border bg-white lg:order-2 lg:sticky lg:top-8"
+        className="border-line order-1 rounded-2xl border bg-white md:order-2 md:sticky md:top-8"
       >
         <div className="border-line border-b px-6 py-5">
           <h2
@@ -424,14 +430,26 @@ export function BackupConsole() {
         </div>
 
         <div className="px-6 py-6">
-          <ul className="flex flex-col gap-1.5">
+          {/* The seven tables with their live row counts. A list of table names
+              told an operator nothing they did not already know; the counts are
+              the size of the thing they are about to copy, and they are the
+              numbers a preview of the resulting file should match. */}
+          <p className="text-body text-[0.8125rem]">
+            <span className="text-ink font-mono text-[1.375rem] font-medium tabular-nums">
+              {TABLES.reduce((sum, t) => sum + (liveCounts[t.key] ?? 0), 0)}
+            </span>{" "}
+            rows across {TABLES.length} tables
+          </p>
+          <ul className="mt-3 flex flex-col">
             {TABLES.map((table) => (
               <li
                 key={table.key}
-                className="text-body flex items-center gap-2 text-[0.8125rem]"
+                className="border-line flex items-center justify-between gap-3 border-b py-1.5 text-[0.8125rem] last:border-0"
               >
-                <span aria-hidden="true" className="bg-brand/40 size-1 rounded-full" />
-                {table.label}
+                <span className="text-body">{table.label}</span>
+                <span className="text-ink font-mono tabular-nums">
+                  {liveCounts[table.key] ?? 0}
+                </span>
               </li>
             ))}
           </ul>

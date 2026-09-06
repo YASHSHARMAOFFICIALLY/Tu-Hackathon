@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BackupConsole } from "@/components/admin/backup-console";
 import { PageShell } from "@/components/app/page-shell";
 import { getCurrentUser } from "@/modules/auth/permissions";
+import { exportCounts } from "@/modules/backup/export";
 
 export const metadata = { title: "Backup and restore" };
 
@@ -66,7 +67,7 @@ export default async function BackupPage() {
           nothing is written and the register is exactly as it was.
         </p>
 
-        <BackupConsole />
+        <BackupConsole liveCounts={await exportCounts()} />
       </div>
     </PageShell>
   );

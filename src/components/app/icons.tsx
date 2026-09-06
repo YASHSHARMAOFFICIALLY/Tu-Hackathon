@@ -93,6 +93,18 @@ export function ArchiveIcon(props: IconProps) {
   );
 }
 
+/** Two people: the roles console lists accounts, not archives or records. */
+export function PeopleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="9.5" cy="8" r="3.5" />
+      <path d="M3.5 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+      <path d="M16.5 5.2a3.5 3.5 0 0 1 0 6.6" />
+      <path d="M18 14.4c1.7 1 2.8 2.9 2.8 5.1" />
+    </Svg>
+  );
+}
+
 export function ClockIcon(props: IconProps) {
   return (
     <Svg {...props}>

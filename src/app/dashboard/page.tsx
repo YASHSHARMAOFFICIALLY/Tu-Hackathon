@@ -8,7 +8,8 @@ import {
   ListIcon,
   ReportIcon,
 } from "@/components/app/icons";
-import { AppShell, type NavItem } from "@/components/app/shell";
+import { navFor } from "@/components/app/page-shell";
+import { AppShell } from "@/components/app/shell";
 import { IssueMap } from "@/components/issues/issue-map";
 import {
   Categories,
@@ -65,16 +66,9 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const name = user.displayName ?? user.name;
   const isAuthority = user.role === "OFFICER" || user.role === "ADMIN";
 
-  const nav: NavItem[] = [
-    { href: "/", label: "Home", icon: "home" },
-    { href: "/dashboard", label: "Dashboard", icon: "chart" },
-    { href: "/report", label: "Report an issue", icon: "report" },
-    { href: "/issues", label: "All issues", icon: "list" },
-    { href: "/track", label: "Track a report", icon: "pin" },
-    ...(user.role === "ADMIN"
-      ? [{ href: "/admin/backup", label: "Backup", icon: "archive" } as const]
-      : []),
-  ];
+  // The same nav the rest of the app gets. It was duplicated here and drifted
+  // the moment a role-shaped item was added, so it comes from one place now.
+  const nav = navFor(user);
 
   return (
     <AppShell nav={nav} user={{ name, role: user.role }} title="Dashboard">

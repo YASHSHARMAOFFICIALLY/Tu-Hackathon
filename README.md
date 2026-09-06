@@ -58,7 +58,7 @@ http://localhost:3000/api/auth/callback/google
 | `bun run db:migrate` | Apply pending migrations |
 | `bun run db:check` | Fail if schema and migrations disagree |
 | `bun run db:studio` | Browse the database |
-| `bun run db:admin <email>` | Promote a signed-in user to ADMIN |
+| `bun run db:admin <email>` | Promote a signed-in user to ADMIN (bootstrap only; after that use `/admin/people`) |
 | `bun run db:seed:departments` | Seed the 5 departments (idempotent) |
 | `bun run db:seed:demo` | Seed ~50 demo issues (deterministic, re-runnable) |
 
@@ -117,12 +117,19 @@ Two rules keep this working with several contributors:
 | `DELETE` | `/api/issues/:id/attachments/:attachmentId` | reporter or OFFICER+ |
 | `POST`/`DELETE` | `/api/issues/:id/duplicates` | OFFICER+ |
 | `GET` | `/api/dashboard` | OFFICER+ |
+| `GET` | `/api/admin/people` | ADMIN |
+| `PATCH` | `/api/admin/people/:userId` | ADMIN — sets role and department together |
 | `GET` | `/api/admin/backup/export` | ADMIN |
 | `POST` | `/api/admin/backup/preview` | ADMIN |
 | `POST` | `/api/admin/backup/restore` | ADMIN |
 
 Officers act only on issues in their own department; an untriaged issue (no
 department yet) is open to any officer.
+
+Officers are made at `/admin/people`, by an administrator. `bun run db:admin`
+bootstraps the first administrator and nothing else: there is deliberately no
+self-service path to a role. An administrator cannot change their own role,
+which is what makes it impossible to leave the register with none.
 
 ---
 

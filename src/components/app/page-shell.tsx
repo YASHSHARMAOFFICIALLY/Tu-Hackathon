@@ -45,7 +45,10 @@ export function navFor(user: CurrentUser | null): NavItem[] {
     { href: "/issues", label: "All issues", icon: "list" },
     { href: "/track", label: "Track a report", icon: "pin" },
     ...(user?.role === "ADMIN"
-      ? [{ href: "/admin/backup", label: "Backup", icon: "archive" as const }]
+      ? [
+          { href: "/admin/people", label: "People", icon: "people" as const },
+          { href: "/admin/backup", label: "Backup", icon: "archive" as const },
+        ]
       : []),
   ];
 }

@@ -10,6 +10,7 @@ import {
   HomeIcon,
   ListIcon,
   MenuIcon,
+  PeopleIcon,
   PinIcon,
   ReportIcon,
 } from "@/components/app/icons";
@@ -40,6 +41,7 @@ const ICONS = {
   list: ListIcon,
   chart: ChartIcon,
   pin: PinIcon,
+  people: PeopleIcon,
   archive: ArchiveIcon,
 } as const;
 

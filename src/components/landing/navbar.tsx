@@ -3,12 +3,32 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { cn } from "@/lib/utils";
+
 /**
  * Landing navigation.
  *
- * Transparent so the hero photograph runs behind it; it only grows a surface
- * once the page scrolls past the hero, where the content behind it is no longer
- * guaranteed to be pale.
+ * Two states, one element. At the top of the page the bar is the full 1440
+ * width and completely transparent, so the hero photograph runs behind it
+ * uninterrupted. Past 16px of scroll it contracts into a floating pill: a
+ * narrower container, a rounded-full edge, and a translucent white ground with
+ * a backdrop blur behind it.
+ *
+ * The blur is the whole effect and it is worth being careful about, because
+ * translucent chrome is where readable interfaces usually go to die. Two rules
+ * keep it honest:
+ *
+ *   1. The ground is 78% white, not 40%. Over the darkest thing that can pass
+ *      under it (the `--ink` panel in "both sides") the composite is about
+ *      #b9bdba, and `--ink` on that measures 8.4:1. Over the page's white it is
+ *      effectively white. There is no scroll position where the labels get
+ *      thin.
+ *   2. `backdrop-blur` is a progressive enhancement. A browser that ignores it
+ *      still gets the 78% ground, which is what carries the contrast.
+ *
+ * The four links are centred on the container in both states rather than
+ * sitting next to the wordmark: absolutely positioned, so their centre does not
+ * drift when the wordmark or the buttons change width.
  *
  * Every destination here is a route that exists. Nothing points at a section
  * that has not been built: a nav item with nowhere to go is a dead control.
@@ -47,16 +67,18 @@ export function Navbar() {
   }, [open]);
 
   return (
-    <header
-      className={`sticky top-0 z-50 transition-[background-color,box-shadow] duration-300 ${
-        scrolled
-          ? "bg-canvas/85 shadow-[0_1px_0_var(--color-line)] backdrop-blur-md"
-          : "bg-transparent"
-      }`}
-    >
+    <header className="sticky top-0 z-50 px-4 md:px-8">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-20 max-w-[1440px] items-center gap-10 px-4 md:px-8"
+        className={cn(
+          // Named properties, never `transition-all`: the transition has to
+          // cover the width and the ground, and nothing else on this element
+          // should animate by accident.
+          "relative mx-auto flex items-center transition-[max-width,height,transform,border-radius,background-color,border-color,box-shadow,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          scrolled
+            ? "h-16 max-w-5xl translate-y-3 rounded-full border border-white/60 bg-white/[0.78] px-4 shadow-[0_10px_36px_-16px_rgb(22_36_29/0.35)] backdrop-blur-xl md:px-5"
+            : "h-20 max-w-[1440px] translate-y-0 rounded-full border border-transparent bg-transparent px-0",
+        )}
       >
         <Link
           href="/"
@@ -68,7 +90,11 @@ export function Navbar() {
           </span>
         </Link>
 
-        <ul className="hidden items-center gap-1 lg:flex">
+        {/* Absolutely centred so the group's midpoint is the container's
+            midpoint, whatever the wordmark and the buttons either side weigh.
+            A flex `justify-center` between two unequal siblings is centred only
+            by coincidence. */}
+        <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
           {LINKS.map((link) => (
             <li key={link.label}>
               <Link
@@ -122,7 +148,7 @@ export function Navbar() {
       {open ? (
         <div
           id="mobile-menu"
-          className="bg-canvas border-line border-t px-4 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))] lg:hidden"
+          className="border-line bg-canvas/95 mx-auto mt-2 max-w-5xl rounded-2xl border px-3 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_16px_40px_-20px_rgb(22_36_29/0.45)] backdrop-blur-xl lg:hidden"
         >
           <ul>
             {LINKS.map((link) => (

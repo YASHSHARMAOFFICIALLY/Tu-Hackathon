@@ -5,6 +5,7 @@ import { Hero } from "@/components/landing/hero";
 import { Navbar } from "@/components/landing/navbar";
 import { Register } from "@/components/landing/register";
 import { TwoSides } from "@/components/landing/two-sides";
+import { Walkthrough } from "@/components/landing/walkthrough";
 
 /**
  * The landing page stays statically rendered. `Register` reads the database,
@@ -21,6 +22,7 @@ export default function Page() {
         <Hero />
         <BentoCard />
         <TwoSides />
+        <Walkthrough />
         <Register />
         <Faq />
       </main>

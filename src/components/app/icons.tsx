@@ -93,6 +93,16 @@ export function ArchiveIcon(props: IconProps) {
   );
 }
 
+/** A tray: the officer's queue is work waiting on them, not a list of records. */
+export function InboxIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 13.5 6 5.5h12l2.5 8v4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-4Z" />
+      <path d="M3.5 13.5h4l1.2 2.4h6.6l1.2-2.4h4" />
+    </Svg>
+  );
+}
+
 /** Two people: the roles console lists accounts, not archives or records. */
 export function PeopleIcon(props: IconProps) {
   return (

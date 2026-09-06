@@ -33,6 +33,7 @@ export function FilterBar({
   categories,
   /** The filters currently in the URL, so the controls show what is applied. */
   values,
+  scope,
   className,
 }: {
   departments: { id: string; name: string }[];
@@ -44,6 +45,13 @@ export function FilterBar({
     category?: string;
     departmentId?: string;
   };
+  /**
+   * "me" when the bar is filtering an officer's own queue rather than the whole
+   * register. It rides along as a hidden field, because a GET form submits the
+   * fields it contains and nothing else: without it, filtering inside the queue
+   * would quietly drop the officer back into the public register.
+   */
+  scope?: "me";
   className?: string;
 }) {
   return (
@@ -55,6 +63,8 @@ export function FilterBar({
         className,
       )}
     >
+      {scope ? <input type="hidden" name="assigned" value={scope} /> : null}
+
       <label className="block">
         <span className="text-body mb-1.5 block text-[0.75rem] font-medium">
           Search
@@ -122,7 +132,7 @@ export function FilterBar({
           Apply
         </button>
         <Link
-          href="/issues"
+          href={scope ? "/issues?assigned=me" : "/issues"}
           className="text-body hover:text-ink inline-flex h-11 items-center rounded-xl px-3 text-[0.875rem] transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
         >
           Reset

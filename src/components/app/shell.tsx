@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import {
   ArchiveIcon,
   ChartIcon,
   HomeIcon,
+  InboxIcon,
   ListIcon,
   MenuIcon,
   PeopleIcon,
@@ -39,6 +40,7 @@ const ICONS = {
   home: HomeIcon,
   report: ReportIcon,
   list: ListIcon,
+  inbox: InboxIcon,
   chart: ChartIcon,
   pin: PinIcon,
   people: PeopleIcon,
@@ -65,10 +67,13 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(true);
   const pathname = usePathname();
+  // The officer's queue is `/issues?assigned=me`, so the rail has two items on
+  // one path and the active state has to read the query too.
+  const assigned = useSearchParams().get("assigned");
 
   return (
     <div className="bg-surface flex min-h-[100svh]">
-      <Rail nav={nav} open={open} pathname={pathname} />
+      <Rail nav={nav} open={open} pathname={pathname} assigned={assigned} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-line bg-canvas/85 sticky top-0 z-10 flex h-14 items-center gap-3 border-b px-4 backdrop-blur md:px-6">
@@ -146,7 +151,7 @@ export function AppShell({
         >
           {nav.map((item) => {
             const Icon = ICONS[item.icon];
-            const active = isActive(pathname, item.href);
+            const active = isActive(pathname, assigned, item.href);
             return (
               <Link
                 key={item.href}
@@ -178,10 +183,12 @@ function Rail({
   nav,
   open,
   pathname,
+  assigned,
 }: {
   nav: NavItem[];
   open: boolean;
   pathname: string;
+  assigned: string | null;
 }) {
   return (
     <aside
@@ -226,7 +233,7 @@ function Rail({
       <nav aria-label="Main" className="mt-4 flex flex-col gap-1">
         {nav.map((item) => {
           const Icon = ICONS[item.icon];
-          const active = isActive(pathname, item.href);
+          const active = isActive(pathname, assigned, item.href);
           return (
             <Link
               key={item.href}
@@ -288,9 +295,16 @@ function Mark() {
 
 /** `/dashboard` must not light up on `/dashboards-something`, and `/` only
  *  matches itself, so the prefix test needs the boundary. */
-function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+/**
+ * ponytail: `assigned` is the only query parameter the nav distinguishes, so it
+ * is compared by name rather than by diffing whole query strings. Generalise the
+ * day a second item shares a path with a different parameter.
+ */
+function isActive(pathname: string, assigned: string | null, href: string) {
+  const [path, query] = href.split("?");
+  if (path === "/") return pathname === "/";
+  if (pathname !== path && !pathname.startsWith(`${path}/`)) return false;
+  return (new URLSearchParams(query).get("assigned") ?? null) === assigned;
 }
 
 function initials(name: string) {

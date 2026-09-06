@@ -42,6 +42,17 @@ export function navFor(user: CurrentUser | null): NavItem[] {
       ? [{ href: "/dashboard", label: "Dashboard", icon: "chart" as const }]
       : []),
     { href: "/report", label: "Report an issue", icon: "report" },
+    // An officer's own work comes before the whole city's. The queue is the
+    // register with one filter applied, so it is a URL, not a second screen.
+    ...(user?.role === "OFFICER" || user?.role === "ADMIN"
+      ? [
+          {
+            href: "/issues?assigned=me",
+            label: "My queue",
+            icon: "inbox" as const,
+          },
+        ]
+      : []),
     { href: "/issues", label: "All issues", icon: "list" },
     { href: "/track", label: "Track a report", icon: "pin" },
     ...(user?.role === "ADMIN"

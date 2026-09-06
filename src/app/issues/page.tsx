@@ -51,17 +51,37 @@ export default async function IssuesPage(props: PageProps<"/issues">) {
   const page = Math.floor(input.offset / PAGE_SIZE) + 1;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  // The officer's queue is this page with `assigned=me` applied, not a second
+  // screen: same filters, same map, same cards, same URL rules. Only the framing
+  // changes, and only for someone the queue means something to.
+  const isQueue =
+    input.assigned === "me" &&
+    (user?.role === "OFFICER" || user?.role === "ADMIN");
+
   return (
-    <PageShell title="All issues">
+    <PageShell title={isQueue ? "My queue" : "All issues"}>
       <div className="mx-auto w-full max-w-6xl">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
           <div>
             <h1 className="text-ink text-[clamp(1.5rem,2.4vw,2rem)] leading-[1.1] font-bold tracking-[-0.03em]">
-              The register
+              {isQueue ? "Assigned to you" : "The register"}
             </h1>
             <p className="text-body mt-2 text-[0.9375rem] leading-[1.55]">
-              Every report filed in the city, with the status each one has
-              reached. Personal details of reporters are never shown here.
+              {isQueue ? (
+                <>
+                  The reports you are the named officer on. Everything else in
+                  the city is in{" "}
+                  <Link
+                    href="/issues"
+                    className="text-brand underline decoration-current/30 underline-offset-4 hover:decoration-current"
+                  >
+                    the register
+                  </Link>
+                  .
+                </>
+              ) : (
+                "Every report filed in the city, with the status each one has reached. Personal details of reporters are never shown here."
+              )}
             </p>
           </div>
           <p className="text-body text-[0.875rem]">
@@ -80,6 +100,7 @@ export default async function IssuesPage(props: PageProps<"/issues">) {
             category: input.category,
             departmentId: input.departmentId,
           }}
+          scope={isQueue ? "me" : undefined}
           className="mt-6"
         />
 
@@ -108,9 +129,11 @@ export default async function IssuesPage(props: PageProps<"/issues">) {
           issues={rows}
           className="mt-5"
           empty={
-            hasFilters(params)
-              ? "No report matches these filters. Clear one and try again."
-              : "Nothing has been reported yet. The first report will appear here the moment it is filed."
+            isQueue && !hasFilters(params)
+              ? "Nothing is assigned to you. Untriaged reports are open to any officer in the register."
+              : hasFilters(params)
+                ? "No report matches these filters. Clear one and try again."
+                : "Nothing has been reported yet. The first report will appear here the moment it is filed."
           }
         />
 

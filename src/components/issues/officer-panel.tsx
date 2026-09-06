@@ -61,6 +61,8 @@ type Ai = {
   reasoning: string | null;
   confidence: number | null;
   reviewedAt: string | Date | null;
+  /** Photos the model actually read. Zero means it worked from text alone. */
+  photoCount: number;
 };
 
 export function OfficerPanel({
@@ -174,6 +176,18 @@ export function OfficerPanel({
           {ai.summary ? (
             <p className="text-body mt-2 text-[0.875rem] leading-[1.6]">
               {ai.summary}
+            </p>
+          ) : null}
+
+          {/* Only ever shown when the model really read them. `aiPhotoCount` is
+              what that run fetched, not what the issue happens to carry now. */}
+          {ai.photoCount > 0 ? (
+            <p className="text-body mt-2 text-[0.8125rem]">
+              Read the report and{" "}
+              <span className="text-ink font-medium">
+                {ai.photoCount} {ai.photoCount === 1 ? "photo" : "photos"}
+              </span>
+              .
             </p>
           ) : null}
 

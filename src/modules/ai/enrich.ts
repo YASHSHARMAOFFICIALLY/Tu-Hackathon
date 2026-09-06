@@ -9,6 +9,13 @@
  * ponytail: fire-and-forget from the route rather than a job queue. Add a queue
  * when volume justifies retries; for now a failed enrichment is re-runnable
  * with the backfill script.
+ *
+ * It also re-runs when a photo is attached, because photos arrive after the
+ * issue exists and the first run therefore saw none. ponytail: uploading three
+ * photos fires three enrichments, each reading whatever was present when it
+ * started, and the last to finish wins. Wasteful, not wrong, and the panel only
+ * ever claims the photo count that run actually read. Coalesce them the day the
+ * model bill matters.
  */
 import { eq } from "drizzle-orm";
 
@@ -30,13 +37,30 @@ export async function enrichIssue(issueId: string): Promise<void> {
   try {
     const issue = await db.query.issues.findFirst({
       where: { id: issueId },
-      columns: { id: true, title: true, description: true, address: true },
+      columns: {
+        id: true,
+        title: true,
+        description: true,
+        address: true,
+        aiReviewedAt: true,
+      },
+      // Photos are part of the complaint, so triage reads them. They arrive
+      // after the issue exists, which is why the attachment route re-runs this.
+      with: { attachments: { columns: { url: true, fileType: true } } },
     });
     if (!issue) return;
 
+    // An officer has already accepted or overridden these suggestions. Rewriting
+    // them because a photo arrived late would silently undo a human decision.
+    if (issue.aiReviewedAt) return;
+
+    const photoUrls = (issue.attachments ?? [])
+      .filter((a) => a.fileType?.startsWith("image/"))
+      .map((a) => a.url);
+
     // Both calls in parallel: they are independent, and triage is the slow one.
     const [triage, embedding] = await Promise.all([
-      triageIssue(issue),
+      triageIssue({ ...issue, photoUrls }),
       embed(embeddingText(issue)),
     ]);
 
@@ -61,6 +85,7 @@ export async function enrichIssue(issueId: string): Promise<void> {
         aiSummary: triage.summary,
         aiReasoning: triage.reasoning,
         aiConfidence: triage.confidence,
+        aiPhotoCount: triage.photoCount,
       });
     }
 

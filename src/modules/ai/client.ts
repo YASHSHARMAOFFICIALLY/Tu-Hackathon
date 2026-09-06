@@ -57,11 +57,23 @@ type GenerateResponse = {
 export async function generateJson<T>(
   prompt: string,
   schema?: Record<string, unknown>,
+  images: InlineImage[] = [],
 ): Promise<T | null> {
   const response = await post<GenerateResponse>(
     `models/${env.GEMINI_MODEL}:generateContent`,
     {
-      contents: [{ parts: [{ text: prompt }] }],
+      // The prompt leads, the images follow: Gemini reads parts in order, and
+      // an image handed over before the question is an image with no question.
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            ...images.map((image) => ({
+              inlineData: { mimeType: image.mimeType, data: image.base64 },
+            })),
+          ],
+        },
+      ],
       generationConfig: {
         responseMimeType: "application/json",
         ...(schema ? { responseSchema: schema } : {}),
@@ -79,6 +91,54 @@ export async function generateJson<T>(
     return JSON.parse(text) as T;
   } catch {
     console.warn("Gemini returned unparseable JSON:", text.slice(0, 200));
+    return null;
+  }
+}
+
+/** A photo travelling to the model as bytes, never as a URL for it to fetch. */
+export type InlineImage = { mimeType: string; base64: string };
+
+/** What `fetchInlineImage` will hand to the model. SVG is excluded upstream in
+ *  `assertUploadable` because it is scriptable; it is excluded here too because
+ *  the model cannot read it as a photograph anyway. */
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Refuse anything that would blow the request size. Our own uploads cap at 8MB
+ *  per file, but a URL in the database can predate that rule or point elsewhere. */
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Downloads one photo and returns it as inline base64.
+ *
+ * The alternative is handing Gemini the URL, which makes Google fetch our blob
+ * store on our behalf and only works while the URL is public. Fetching it here
+ * keeps the decision ours and works for a private store later.
+ *
+ * Null on every failure: a dead link, a wrong type, an oversized file, a
+ * timeout. A photo that cannot be read is a photo the triage does without.
+ */
+export async function fetchInlineImage(
+  url: string,
+): Promise<InlineImage | null> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!response.ok) return null;
+
+    const mimeType = (response.headers.get("content-type") ?? "")
+      .split(";")[0]
+      .trim();
+    if (!IMAGE_TYPES.includes(mimeType)) return null;
+
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES) {
+      return null;
+    }
+
+    return { mimeType, base64: Buffer.from(bytes).toString("base64") };
+  } catch (error) {
+    console.warn("Could not read a photo for triage:", error);
     return null;
   }
 }

@@ -99,6 +99,7 @@ const issueSchema = z.object({
   aiReasoning: z.string().nullable().optional(),
   aiConfidence: z.number().int().nullable().optional(),
   aiReviewedAt: nullableDate,
+  aiPhotoCount: z.number().int().nullable().optional(),
 
   createdAt: dateish,
   updatedAt: dateish,

@@ -120,6 +120,7 @@ export function toAuthorityIssue(issue: IssueWithRelations) {
       reasoning: issue.aiReasoning ?? null,
       confidence: issue.aiConfidence ?? null,
       reviewedAt: issue.aiReviewedAt ?? null,
+      photoCount: issue.aiPhotoCount ?? 0,
     },
     comments: issue.comments?.map((c) => ({
       id: c.id,

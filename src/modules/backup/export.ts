@@ -85,6 +85,7 @@ export async function exportBackup(
       aiDepartmentId: issues.aiDepartmentId, aiSummary: issues.aiSummary,
       aiReasoning: issues.aiReasoning, aiConfidence: issues.aiConfidence,
       aiReviewedAt: issues.aiReviewedAt,
+      aiPhotoCount: issues.aiPhotoCount,
       createdAt: issues.createdAt, updatedAt: issues.updatedAt,
     }).from(issues),
     db.select().from(issueHistory),

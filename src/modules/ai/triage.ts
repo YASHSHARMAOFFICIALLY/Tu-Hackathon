@@ -18,7 +18,7 @@ import { departments } from "@/db/schema";
 import type { IssueCategory, IssuePriority } from "@/db/schema/enums";
 import { issueCategory, issuePriority } from "@/db/schema/enums";
 
-import { generateJson } from "./client";
+import { fetchInlineImage, generateJson, type InlineImage } from "./client";
 
 export type TriageResult = {
   category: IssueCategory;
@@ -28,7 +28,36 @@ export type TriageResult = {
   summary: string;
   reasoning: string;
   confidence: number;
+  /** How many photos the model actually read. Zero when there were none, when
+   *  they could not be fetched, or when AI is off. The panel only claims the
+   *  photos were read when this is above zero. */
+  photoCount: number;
 };
+
+/**
+ * At most three photos per call.
+ *
+ * Not a token-cost decision: the third photo of a pothole adds nothing a triage
+ * officer would weigh, and each one is a fetch that can hang. `assertUploadable`
+ * caps an issue at five.
+ */
+const MAX_PHOTOS = 3;
+
+/**
+ * Reads up to `MAX_PHOTOS` of an issue's photos into inline bytes.
+ *
+ * Sequential rather than parallel: three 8MB downloads at once, from a route
+ * that is already fire-and-forget background work, is a spike with nothing
+ * waiting on it. Failures are dropped, never thrown.
+ */
+async function readPhotos(urls: string[]): Promise<InlineImage[]> {
+  const images: InlineImage[] = [];
+  for (const url of urls.slice(0, MAX_PHOTOS)) {
+    const image = await fetchInlineImage(url);
+    if (image) images.push(image);
+  }
+  return images;
+}
 
 /**
  * Response schema handed to Gemini. Constraining the output at the API level is
@@ -53,9 +82,12 @@ function responseSchema(departmentNames: string[]) {
   };
 }
 
-function buildPrompt(
+/** Exported for the tests: the photo clause is the branch worth asserting, and
+ *  asserting it must not cost a live model call. */
+export function buildPrompt(
   input: { title: string; description: string; address: string },
   departmentNames: string[],
+  photoCount: number,
 ): string {
   // Deliberately concrete about what "priority" means here. Without these
   // anchors a model rates almost everything MEDIUM, which is useless for triage.
@@ -79,13 +111,22 @@ Weigh: severity, how many people are affected, safety risk, proximity to schools
 
 summary: at most two sentences, written for a busy officer.
 reasoning: one sentence explaining the priority score.
-confidence: 0-100, how certain you are of this classification. Be honest — a vague complaint deserves a low score.`;
+confidence: 0-100, how certain you are of this classification. Be honest — a vague complaint deserves a low score.${
+    photoCount > 0
+      ? `
+
+${photoCount} photograph${photoCount === 1 ? "" : "s"} taken by the reporter ${photoCount === 1 ? "is" : "are"} attached. Judge severity from what you can actually see in ${photoCount === 1 ? "it" : "them"}, and say so in one clause of your reasoning. If a photograph contradicts the description, trust the photograph and note the difference. If you cannot make out the problem, say that instead of guessing.`
+      : ""
+  }`;
 }
 
 export async function triageIssue(input: {
   title: string;
   description: string;
   address: string;
+  /** Blob URLs of the reporter's photos, newest last. Empty for a text-only
+   *  report, and for every report filed while uploads were disabled. */
+  photoUrls?: string[];
 }): Promise<TriageResult | null> {
   const departmentRows = await db
     .select({ name: departments.name })
@@ -93,6 +134,8 @@ export async function triageIssue(input: {
 
   if (departmentRows.length === 0) return null;
   const names = departmentRows.map((d) => d.name);
+
+  const images = await readPhotos(input.photoUrls ?? []);
 
   const raw = await generateJson<{
     category: string;
@@ -102,7 +145,7 @@ export async function triageIssue(input: {
     summary: string;
     reasoning: string;
     confidence: number;
-  }>(buildPrompt(input, names), responseSchema(names));
+  }>(buildPrompt(input, names, images.length), responseSchema(names), images);
 
   if (!raw) return null;
 
@@ -125,5 +168,6 @@ export async function triageIssue(input: {
     summary: String(raw.summary ?? "").slice(0, 500),
     reasoning: String(raw.reasoning ?? "").slice(0, 500),
     confidence: clamp(raw.confidence),
+    photoCount: images.length,
   };
 }

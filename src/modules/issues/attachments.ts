@@ -22,6 +22,7 @@ import { db } from "@/db";
 import { attachments } from "@/db/schema";
 import { env, uploadsEnabled } from "@/env";
 import { NotFoundError, ValidationError } from "@/lib/http";
+import { enrichIssue } from "@/modules/ai/enrich";
 import { getCurrentUser, requireRole } from "@/modules/auth/permissions";
 
 /**
@@ -131,6 +132,13 @@ export async function addAttachment(
       url: attachments.url,
       fileType: attachments.fileType,
     });
+
+  // The photo is part of the complaint, so triage should see it. The first
+  // enrichment ran when the issue was created, before any photo existed, which
+  // is why this re-runs rather than the create path waiting for one. Unawaited
+  // for the same reason it is unawaited there: the upload has succeeded and a
+  // slow model must not hold the response.
+  if (file.type.startsWith("image/")) void enrichIssue(issueId);
 
   return row;
 }

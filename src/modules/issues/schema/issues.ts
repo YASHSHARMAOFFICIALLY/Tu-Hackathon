@@ -96,6 +96,15 @@ export const issues = pgTable(
     aiConfidence: integer("ai_confidence"),
     /** Set when an officer accepts or overrides the suggestions. */
     aiReviewedAt: timestamp("ai_reviewed_at", { withTimezone: true }),
+    /**
+     * How many of the reporter's photos the model actually read.
+     *
+     * Stored rather than derived from `attachments.length`, because they are
+     * different facts: a report can carry five photos that triage never saw
+     * (filed before the photo landed, or the fetch failed). The panel says "read
+     * the photos" only when this is above zero, so the claim is always true.
+     */
+    aiPhotoCount: integer("ai_photo_count"),
 
     /**
      * Semantic embedding of "title + description", for duplicate detection.

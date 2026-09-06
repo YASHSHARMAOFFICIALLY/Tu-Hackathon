@@ -10,6 +10,7 @@ import type {
   IssueStatus,
 } from "@/db/schema/enums";
 import { cn } from "@/lib/utils";
+import type { ResolutionPlan } from "@/modules/ai/copilot";
 
 /**
  * The officer's controls: triage, move, assign, annotate.
@@ -95,6 +96,12 @@ export function OfficerPanel({
   const [moveTo, setMoveTo] = useState<IssueStatus | null>(null);
   const [note, setNote] = useState("");
   const [internal, setInternal] = useState("");
+  // The copilot's answer is never stored, so it lives here and nowhere else.
+  // Closing the page throws it away, which is the right lifetime for a draft
+  // nobody has agreed to.
+  const [plan, setPlan] = useState<ResolutionPlan | null>(null);
+  const [draft, setDraft] = useState("");
+  const [planError, setPlanError] = useState<string | null>(null);
 
   /** One place that talks to the API, so every action reports failure alike. */
   async function call(
@@ -486,6 +493,112 @@ export function OfficerPanel({
             ))}
           </select>
         </label>
+      </div>
+
+      {/* ── Resolution copilot ───────────────────────────────── */}
+      <div className="border-line mt-6 border-t pt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="text-ink text-[0.875rem] font-semibold">
+            Suggested next steps
+          </p>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={async () => {
+              setBusy("copilot");
+              setPlanError(null);
+              try {
+                const response = await fetch(`/api/issues/${issueId}/copilot`, {
+                  method: "POST",
+                });
+                if (!response.ok) {
+                  const body = (await response
+                    .json()
+                    .catch(() => null)) as { error?: string } | null;
+                  setPlanError(
+                    body?.error ??
+                      `No suggestion could be produced (${response.status}).`,
+                  );
+                  return;
+                }
+                const next = (await response.json()) as ResolutionPlan;
+                setPlan(next);
+                setDraft(next.citizenUpdate);
+              } catch {
+                setPlanError(
+                  "The request did not reach the server. Check your connection.",
+                );
+              } finally {
+                setBusy(null);
+              }
+            }}
+            className="text-brand rounded text-[0.8125rem] font-medium underline decoration-current/30 underline-offset-4 transition-colors hover:decoration-current disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+          >
+            {busy === "copilot"
+              ? "Thinking…"
+              : plan
+                ? "Suggest again"
+                : "Suggest what to do"}
+          </button>
+        </div>
+
+        {planError ? (
+          <p role="alert" className="text-danger mt-2 text-[0.8125rem] leading-[1.55]">
+            {planError}
+          </p>
+        ) : plan ? (
+          <>
+            <ol className="text-body mt-3 list-decimal space-y-1.5 pl-5 text-[0.875rem] leading-[1.6]">
+              {plan.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+
+            <label className="mt-4 block">
+              <span className="text-ink block text-[0.875rem] font-medium">
+                Draft update for the citizen
+              </span>
+              <span className="text-body mt-1 mb-2 block text-[0.8125rem] leading-[1.5]">
+                Read it, change what is wrong, then post it. It appears on the
+                public report under your name, like anything else you write.
+              </span>
+              <textarea
+                rows={4}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className={cn(FIELD, "resize-y")}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={busy !== null || draft.trim().length === 0}
+              onClick={async () => {
+                const ok = await call(
+                  "draft",
+                  `/api/issues/${issueId}/comments`,
+                  {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ body: draft.trim() }),
+                  },
+                );
+                if (ok) {
+                  setPlan(null);
+                  setDraft("");
+                }
+              }}
+              className="bg-brand hover:bg-brand-hover mt-3 h-11 rounded-xl px-5 text-[0.875rem] font-medium text-white transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              {busy === "draft" ? "Posting…" : "Post as an update"}
+            </button>
+          </>
+        ) : (
+          <p className="text-body mt-2 text-[0.8125rem] leading-[1.55]">
+            Asks the model what a municipal officer does next on a report like
+            this, and drafts the update the citizen is waiting for. Nothing is
+            sent until you press post.
+          </p>
+        )}
       </div>
 
       {/* ── Internal note ────────────────────────────────────── */}

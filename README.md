@@ -200,10 +200,15 @@ vercel env add GEMINI_API_KEY production
 ```
 
 `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID` and
-`GOOGLE_CLIENT_SECRET` are set in production. **`GEMINI_API_KEY` is not**, so
-the live site runs with AI triage and semantic duplicate matching off. The
-rule-based duplicate check (category, ~1km, trigram) still runs, which is the
-fallback that path was built for.
+`GOOGLE_CLIENT_SECRET` are set in production. `GEMINI_API_KEY` and `BLOB_READ_WRITE_TOKEN` are set too, so AI triage,
+semantic duplicate matching and photo upload all run on the live site.
+
+The Gemini free tier allows 20 `generateContent` requests per model per day, so
+`modules/ai/client.ts` walks a chain of models and moves to the next on a 429 or
+a 404 (`GEMINI_MODEL_FALLBACKS` overrides the list). When every model in the
+chain is exhausted, triage and the copilot degrade to nothing rather than to an
+error, and the rule-based duplicate check (category, ~1km, trigram) keeps
+working because it never calls a model at all.
 
 ---
 

@@ -43,9 +43,98 @@ async function post<T>(path: string, body: unknown): Promise<T | null> {
   }
 }
 
+/**
+ * `post`, but reporting the HTTP status so a caller can tell "this model is
+ * rate-limited" from "this request is wrong". `post` stays as it is because
+ * embedding has nothing to fall back to.
+ */
+async function postDetailed<T>(
+  path: string,
+  body: unknown,
+): Promise<{ data: T | null; status: number }> {
+  if (!aiEnabled) return { data: null, status: 0 };
+
+  try {
+    const response = await fetch(`${BASE}/${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      console.warn(`Gemini ${path} failed: ${response.status} ${detail.slice(0, 200)}`);
+      return { data: null, status: response.status };
+    }
+
+    return { data: (await response.json()) as T, status: response.status };
+  } catch (error) {
+    console.warn(`Gemini ${path} error:`, error);
+    return { data: null, status: 0 };
+  }
+}
+
 type GenerateResponse = {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
 };
+
+/**
+ * The models to try, in order.
+ *
+ * Every model carries its own free-tier bucket, and that bucket is small: the
+ * quota metric is `generate_content_free_tier_requests` with a limit of 20, and
+ * a single afternoon of backfilling exhausts it. When it does, the API answers
+ * 429 and the app silently loses triage and the copilot, which is survivable on
+ * an ordinary day and not survivable during a demo.
+ *
+ * So a 429 or a 404 moves to the next model rather than giving up. 404 is in
+ * that list because model ids retire: `gemini-2.0-flash` and
+ * `text-embedding-004` were both already gone the first time a key was
+ * configured here, and `gemini-2.5-flash-lite` answers 404 for this project.
+ * Any other failure stops the chain, because a malformed request will be
+ * malformed for every model and trying five of them just costs five calls.
+ */
+function modelChain(): string[] {
+  const extra = (process.env.GEMINI_MODEL_FALLBACKS ?? "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+
+  const chain = [
+    env.GEMINI_MODEL,
+    ...(extra.length > 0
+      ? extra
+      : ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash", "gemini-flash-latest"]),
+  ];
+
+  // Preserve order, drop repeats: the primary usually appears in the defaults.
+  return [...new Set(chain)];
+}
+
+/** Tries each model in turn, moving on only when the model itself is the
+ *  problem (rate-limited or gone). Returns null when every one is exhausted. */
+async function generateWithFallback(
+  body: unknown,
+): Promise<GenerateResponse | null> {
+  if (!aiEnabled) return null;
+
+  for (const model of modelChain()) {
+    const outcome = await postDetailed<GenerateResponse>(
+      `models/${model}:generateContent`,
+      body,
+    );
+    if (outcome.data) return outcome.data;
+    if (outcome.status !== 429 && outcome.status !== 404) return null;
+    console.warn(`Gemini ${model} unavailable (${outcome.status}); trying the next model.`);
+  }
+
+  console.warn("Every Gemini model in the chain is rate-limited or missing.");
+  return null;
+}
 
 /**
  * Runs a prompt and parses the reply as JSON.
@@ -59,9 +148,7 @@ export async function generateJson<T>(
   schema?: Record<string, unknown>,
   images: InlineImage[] = [],
 ): Promise<T | null> {
-  const response = await post<GenerateResponse>(
-    `models/${env.GEMINI_MODEL}:generateContent`,
-    {
+  const response = await generateWithFallback({
       // The prompt leads, the images follow: Gemini reads parts in order, and
       // an image handed over before the question is an image with no question.
       contents: [
@@ -81,8 +168,7 @@ export async function generateJson<T>(
         // the same complaint producing the same answer across demo runs.
         temperature: 0.1,
       },
-    },
-  );
+  });
 
   const text = response?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return null;

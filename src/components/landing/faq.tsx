@@ -66,21 +66,23 @@ export function Faq() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="scroll-mt-24 pb-20 md:pb-28">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 md:px-8 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-14">
-        {/* The heading column stays put while the answers move, so the section
-            has one fixed edge instead of a centred stack of two things. */}
-        <div className="lg:sticky lg:top-28 lg:self-start">
+    <section id="faq" className="scroll-mt-32 pb-20 md:pb-28">
+      <div className="mx-auto max-w-6xl px-5 md:px-8">
+        {/* Centred over the list, the same shape the "how it works" section
+            uses. The heading was a sticky left column; at eight rows the list
+            is short enough that nothing ever scrolled past it, so the sticky
+            column bought nothing and left the page with a third alignment. */}
+        <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-ink text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.1] font-bold tracking-[-0.03em] text-balance">
             Questions before you file
           </h2>
-          <p className="text-body mt-4 text-[1.0625rem] leading-[1.6] text-pretty">
+          <p className="text-body mx-auto mt-4 max-w-[58ch] text-[1.0625rem] leading-[1.6] text-pretty">
             What the system does with a report, and what it does not do with
             your name.
           </p>
         </div>
 
-        <div className="border-line divide-line divide-y overflow-hidden rounded-2xl border bg-white">
+        <div className="border-line divide-line mx-auto mt-12 max-w-3xl divide-y overflow-hidden rounded-2xl border bg-white">
           {FAQS.map((faq, index) => {
             const open = openIndex === index;
 
@@ -95,7 +97,7 @@ export function Faq() {
                   aria-expanded={open}
                   aria-controls={`faq-panel-${index}`}
                   id={`faq-trigger-${index}`}
-                  className="text-ink flex min-h-14 w-full items-center justify-between gap-5 px-5 py-4 text-left text-[1rem] leading-[1.4] font-medium transition-colors hover:bg-tint-green/60 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset focus-visible:outline-none sm:px-7 sm:py-5"
+                  className="text-ink flex min-h-14 w-full items-center justify-between gap-5 px-5 py-4 text-left text-[1rem] leading-[1.4] font-medium transition-colors hover:bg-brand-tint/50 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset focus-visible:outline-none sm:px-7 sm:py-5"
                 >
                   {faq.question}
                   <svg

@@ -211,7 +211,7 @@ function Orbit() {
 
 export function BentoCard() {
   return (
-    <section id="how-it-works" className="scroll-mt-24 py-20 md:py-28">
+    <section id="how-it-works" className="scroll-mt-32 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-5 md:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-ink text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.1] font-bold tracking-[-0.03em] text-balance">

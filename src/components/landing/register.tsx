@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { cn } from "@/lib/utils";
+
 import { IssueCards } from "@/components/issues/issue-cards";
 import { getRegisterSnapshot } from "@/modules/issues/public-stats";
 
@@ -16,8 +18,10 @@ import { getRegisterSnapshot } from "@/modules/issues/public-stats";
  * are a hairline-divided row rather than four stat cards, which is the shape
  * every generated dashboard already has.
  *
- * The band is `--surface`, the one ground the app shell already uses. It gives
- * the section its own plate between two white ones without adding a colour.
+ * The section sits on the page's own white, like every other one. It used to
+ * have a `--surface` plate of its own; against the white sections either side
+ * that read as a panel someone forgot to finish rather than as a deliberate
+ * band, so the page now changes ground exactly once, at the ink panel above.
  *
  * Every number here is a count from the register. None is a claim, a target or
  * a rounded-up figure, and the caption says when it was read.
@@ -33,7 +37,7 @@ function Band({ children }: { children: React.ReactNode }) {
   return (
     <section
       id="register"
-      className="border-line bg-surface scroll-mt-24 border-y py-20 md:py-24"
+      className="scroll-mt-32 py-20 md:py-24"
     >
       <div className="mx-auto max-w-6xl px-5 md:px-8">{children}</div>
     </section>
@@ -72,26 +76,31 @@ export async function Register() {
 
   return (
     <Band>
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-        <div>
-          <h2 className="text-ink max-w-[20ch] text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.1] font-bold tracking-[-0.03em] text-balance">
-            {fmt(snapshot.total)} reports on the register
-          </h2>
-          <p className="text-body mt-4 max-w-[54ch] text-[1.0625rem] leading-[1.6] text-pretty">
-            Counted in the register itself, not quoted at you. Every one of them
-            is open to read, with its status and the history behind it.
-          </p>
-        </div>
+      {/* The link belongs on the heading's baseline, not the paragraph's. It
+          used to sit at the bottom of a block whose second element is two lines
+          of body copy, which left it stranded in the white space to the right
+          of nothing. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+        <h2 className="text-ink max-w-[20ch] text-[clamp(1.875rem,3.2vw,2.75rem)] leading-[1.1] font-bold tracking-[-0.03em] text-balance">
+          {fmt(snapshot.total)} reports on the register
+        </h2>
         <Link href="/issues" className={LINK}>
           Open the register
         </Link>
       </div>
+      <p className="text-body mt-4 max-w-[54ch] text-[1.0625rem] leading-[1.6] text-pretty">
+        Counted in the register itself, not quoted at you. Every one of them is
+        open to read, with its status and the history behind it.
+      </p>
 
       {/* Figures, not cards. A hairline between them is enough separation, and
-          the mono numerals are the same treatment reference numbers get. */}
-      <dl className="border-line divide-line mt-10 grid divide-y rounded-2xl border bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        {FIGURES.map((figure) => (
-          <div key={figure.label} className="px-6 py-7">
+          the mono numerals are the same treatment reference numbers get. They
+          sit on the band's own ground: a white panel here was a third surface
+          on a page that has two, and boxing three numbers turned them back into
+          the stat cards this section exists to avoid. */}
+      <dl className="divide-line mt-10 grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {FIGURES.map((figure, i) => (
+          <div key={figure.label} className={cn("py-7", i === 0 ? "sm:pr-6" : "px-6")}>
             <dd className="text-ink font-mono text-[2rem] leading-none font-bold tabular-nums">
               {fmt(figure.value)}
             </dd>
